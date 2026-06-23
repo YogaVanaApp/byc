@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Yoga Vana Forest Academy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:#E2DCD0;-webkit-font-smoothing:antialiased;font-family:'DM Sans',sans-serif}
+.rich-editor:empty::before{content:attr(data-placeholder);color:#b5adc0;pointer-events:none;display:block}
+.rich-editor{min-height:180px;padding:13px 15px;outline:none;font-family:'EB Garamond',serif;font-size:18px;line-height:1.8;color:#2a1f35}
+.prose-reading h2{font-family:'EB Garamond',serif;font-size:1.45em;color:#5B4969;margin:1.1em 0 0.45em}
+.prose-reading h3{font-family:'EB Garamond',serif;font-size:1.2em;color:#5B4969;margin:0.9em 0 0.35em}
+.prose-reading p{margin-bottom:0.95em;line-height:1.85;font-size:18px;color:#2a1f35}
+.prose-reading ul{padding-left:1.5em;margin-bottom:0.95em}
+.prose-reading li{margin-bottom:0.45em;line-height:1.75;font-size:18px;color:#2a1f35}
+.prose-reading img{max-width:100%;border-radius:10px;margin:10px 0}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes floatLotus{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+.fade-in{animation:fadeIn 0.35s ease forwards}
+.fade-up-d1{animation:fadeUp 0.6s ease 0.1s forwards;opacity:0}
+.fade-up-d2{animation:fadeUp 0.6s ease 0.22s forwards;opacity:0}
+.fade-up-d3{animation:fadeUp 0.6s ease 0.34s forwards;opacity:0}
+.fade-up-d4{animation:fadeUp 0.6s ease 0.46s forwards;opacity:0}
+.lotus-float{animation:floatLotus 4s ease-in-out infinite}
+.pw-input{width:100%;padding:13px 16px;border-radius:12px;border:1.5px solid #C5BBCE;font-size:15px;font-family:'DM Sans',sans-serif;background:rgba(255,255,255,0.9);outline:none;transition:border-color 0.2s,box-shadow 0.2s;color:#2a1f35;text-align:center}
+.pw-input::placeholder{color:#bbb;text-align:center}
+.pw-input:focus{border-color:#8A7099;box-shadow:0 0 0 3px rgba(138,112,153,0.13)}
+.btn-primary{width:100%;padding:14px;border-radius:12px;background:#5B4969;color:white;border:none;font-size:14px;font-weight:400;font-family:'DM Sans',sans-serif;cursor:pointer;letter-spacing:0.7px;transition:background 0.2s,transform 0.15s,box-shadow 0.2s}
+.btn-primary:hover{background:#4a3a57;box-shadow:0 6px 20px rgba(91,73,105,0.28);transform:translateY(-1px)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const {useState,useEffect,useRef,useCallback}=React;
+const ADMIN_EMAIL="yogaupadesha@gmail.com";
+const ADMIN_PASSWORD="BYCadmin2026";
+const STUDENT_PASSWORD="yoga2026";
+const APP_NAME="Yoga Vana Forest Academy";
+const COURSE_NAME="BYC – 200 Hour Yoga Teacher Training";
+const RTDB_URL="https://yoga-vana-ttc-default-rtdb.firebaseio.com";
+const B={green:"#A39C0F",purple:"#8A7099",darkPurple:"#5B4969",adminDark:"#2C1F3A",linen:"#E2DCD0",sage:"#7B8B6F",gold:"#E0B515",metalGold:"#d4af37",red:"#C0392B"};
+const LOTUS_URL="https://res.cloudinary.com/dudunfdov/image/upload/v1781093940/background-removed-background-removed-2_wz5nxf.png";
+const CURVED_LOGO="https://res.cloudinary.com/dudunfdov/image/upload/v1781539507/background-removed-background-removed-2_copy_ctn2lr.png";
+// v2
+
+const LotusImg=({size=40,float=false,dark=false})=>(<img src={LOTUS_URL} alt="lotus" className={float?"lotus-float":""} style={{width:size,height:size,objectFit:"contain",display:"block",flexShrink:0,filter:dark?"brightness(10) saturate(0.8)":"brightness(1.8) saturate(0.55)"}}/>);
+const CurvedLogo=({width=150,opacity=0.5})=>(<img src={CURVED_LOGO} alt="Yoga Vana India" style={{width,maxWidth:"65vw",display:"block",margin:"0 auto",opacity}}/>);
+
+const pad=n=>String(n).padStart(2,"0");
+const fmtDate=iso=>{if(!iso)return"";const d=new Date(iso);return`${pad(d.getDate())} / ${pad(d.getMonth()+1)} / ${d.getFullYear()}`;};
+const fmtDT=iso=>{if(!iso)return"";const d=new Date(iso);return`${fmtDate(iso)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;};
+const todayISO=()=>new Date().toISOString().split("T")[0];
+const mkLesson=n=>({id:n,lessonNumber:n,title:`Lesson ${n}`,reading:"",summary:"",quiz:{mcQuestions:[],reflections:[]},resources:[],readingReleased:false,readingScheduledDate:null,readingReleaseDate:null,summaryReleased:false,summaryScheduledDate:null,summaryReleaseDate:null,quizReleased:false,quizScheduledDate:null,quizReleaseDate:null,resourcesReleased:false,readingMins:5});
+const lessonStatus=l=>{if(l.readingReleased&&l.summaryReleased&&l.quizReleased)return"Released";if(l.readingReleased)return"Reading Live";if(l.readingScheduledDate||l.summaryScheduledDate)return"Scheduled";return"Draft";};
+
+const rtGet=async p=>{try{const r=await fetch(`${RTDB_URL}/${p}.json`);if(!r.ok)return null;return await r.json();}catch{return null;}};
+const rtSet=async(p,d)=>{try{const r=await fetch(`${RTDB_URL}/${p}.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});return r.ok;}catch{return false;}};
+const rtGetAll=async p=>{try{const r=await fetch(`${RTDB_URL}/${p}.json`);if(!r.ok)return[];const d=await r.json();return d?Object.values(d):[];}catch{return[];}};
+
+const loadLessons=async()=>{
+  const results=await Promise.all(Array.from({length:20},(_,i)=>rtGet(`lessons/${i+1}`)));
+  let lessons=results.map((l,i)=>l||mkLesson(i+1));
+  const today=todayISO();let changed=false;
+  lessons=lessons.map(l=>{let u={...l};
+    if(!u.readingReleased&&u.readingScheduledDate&&u.readingScheduledDate<=today){u={...u,readingReleased:true,readingReleaseDate:fmtDate(u.readingScheduledDate+"T00:00:00")};changed=true;}
+    if(!u.summaryReleased&&u.summaryScheduledDate&&u.summaryScheduledDate<=today){u={...u,summaryReleased:true,summaryReleaseDate:fmtDate(u.summaryScheduledDate+"T00:00:00")};changed=true;}
+    if(!u.quizReleased&&u.quizScheduledDate&&u.quizScheduledDate<=today){u={...u,quizReleased:true,quizReleaseDate:fmtDate(u.quizScheduledDate+"T00:00:00")};changed=true;}
+    return u;});
+  if(changed)await Promise.all(lessons.map(l=>rtSet(`lessons/${l.id}`,l)));
+  return lessons;
+};
+const saveLesson=l=>rtSet(`lessons/${l.id}`,l);
+const loadResponses=()=>rtGetAll("quizResponses");
+const saveResponse=e=>rtSet(`quizResponses/${e.lessonId}_${e.studentName.replace(/\s+/g,"_")}`,e);
+const loadSettings=async()=>{const s=await rtGet("settings");return s||{courseLocked:false,whitelist:[],students:{}};};
+const saveSettings=s=>rtSet("settings",s);
+const saveFeedback=(lessonId,studentKey,fb)=>rtSet(`feedback/${lessonId}_${studentKey}`,fb);
+const loadFeedback=()=>rtGetAll("feedback");
+
+// ── UI ATOMS ──
+const Toast=({msg,onDone})=>{useEffect(()=>{const t=setTimeout(onDone,2600);return()=>clearTimeout(t);},[]);return<div style={{position:"fixed",bottom:86,left:"50%",transform:"translateX(-50%)",background:B.adminDark,color:"white",padding:"10px 22px",borderRadius:24,fontSize:13,zIndex:9999,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(44,31,58,0.35)"}}>{msg}</div>;};
+const Badge=({status})=>{const map={"Released":{bg:"#e6f4e0",color:B.green},"Reading Live":{bg:"#e0f0ef",color:"#2E7D6B"},"Scheduled":{bg:"#fdf3d0",color:B.gold},"Draft":{bg:"#ede9f2",color:B.purple}};const s=map[status]||map["Draft"];return<span style={{...s,padding:"3px 11px",borderRadius:12,fontSize:11,fontWeight:600,whiteSpace:"nowrap"}}>{status}</span>;};
+const TypePill=({type})=>{const c={Read:B.darkPurple,Watch:"#7B3F8A",Listen:"#2E7D6B",Visit:B.sage};return<span style={{background:c[type]||B.darkPurple,color:"white",borderRadius:10,padding:"2px 10px",fontSize:11,fontWeight:600}}>{type}</span>;};
+const SL=({c,color=B.purple})=><div style={{fontSize:10,color,letterSpacing:2,textTransform:"uppercase",marginBottom:10,fontWeight:600}}>{c}</div>;
+const Div=()=><div style={{height:1,background:B.sage,opacity:0.25,margin:"22px 0"}}/>;
+
+const IBook=({stroke="rgba(255,255,255,0.85)",size=20})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
+const IFan=({stroke="rgba(255,255,255,0.85)",size=20})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="22" x2="2" y2="6"/><line x1="12" y1="22" x2="5" y2="4.5"/><line x1="12" y1="22" x2="8.5" y2="3.5"/><line x1="12" y1="22" x2="12" y2="3"/><line x1="12" y1="22" x2="15.5" y2="3.5"/><line x1="12" y1="22" x2="19" y2="4.5"/><line x1="12" y1="22" x2="22" y2="6"/></svg>;
+const IHeart=({stroke="rgba(255,255,255,0.85)",size=20})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="12" y1="8" x2="12" y2="14"/></svg>;
+const IDoc=({stroke="rgba(255,255,255,0.5)",size=18})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
+const IPeople=({stroke="rgba(255,255,255,0.5)",size=18})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>;
+const ISun=({stroke="#C5BBCE",size=13})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="4.22" y1="4.22" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.78" y2="19.78"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.22" y1="19.78" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.78" y2="4.22"/></svg>;
+const IRipple=({stroke="#C5BBCE",size=13})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="2"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9"/></svg>;
+const ISprout=({stroke="#C5BBCE",size=13})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22V13"/><path d="M12 13C12 8 8 4 4 4c0 5 3 9 8 9"/><path d="M12 13c0-4 3-8 7-9-0.5 5-3 9-7 9"/></svg>;
+const IHeartS=({stroke="#C5BBCE",size=13})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/><line x1="12" y1="8" x2="12" y2="14"/></svg>;
+
+const STAMPS=[{id:"insight",label:"Deep Insight",Icon:ISun},{id:"reflected",label:"Well Reflected",Icon:IRipple},{id:"seeds",label:"Seeds for Further Insight",Icon:ISprout},{id:"expression",label:"Beautiful Expression",Icon:IHeartS}];
+
+const StampSel=({selected,onSelect})=>(
+  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+    {STAMPS.map(s=>{const sel=selected===s.id;return(
+      <button key={s.id} onClick={()=>onSelect(sel?null:s.id)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",borderRadius:20,fontSize:10.5,cursor:"pointer",border:`1.5px solid ${sel?B.gold:"#C5BBCE"}`,background:sel?"#fdf3d0":"white",color:sel?"#8a6800":"#8A7099",whiteSpace:"nowrap"}}>
+        <s.Icon stroke={sel?B.gold:"#C5BBCE"} size={12}/>{s.label}
+      </button>);})}
+  </div>
+);
+
+const StampShow=({stampId})=>{const s=STAMPS.find(x=>x.id===stampId);if(!s)return null;return(<div style={{display:"inline-flex",alignItems:"center",gap:6,background:B.metalGold,border:`1.5px solid #b8941f`,borderRadius:20,padding:"5px 13px",fontSize:10.5,color:"white",fontWeight:600,marginBottom:8,boxShadow:"0 2px 10px rgba(212,175,55,0.35)"}}><s.Icon stroke="white" size={12}/>{s.label}</div>);};
+
+const AppHeader=({sub,admin=false,onBack=null,bg=B.darkPurple})=>(
+  <div style={{background:bg,padding:"10px 14px",display:"flex",alignItems:"center",gap:8,position:"sticky",top:0,zIndex:20,flexShrink:0}}>
+    {onBack&&<button onClick={onBack} style={{background:"none",border:"none",color:"white",cursor:"pointer",fontSize:22,zIndex:1,flexShrink:0}}>‹</button>}
+    <div style={{width:26,height:26,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",zIndex:1}}><LotusImg size={26} dark/></div>
+    <div style={{position:"absolute",left:0,right:0,display:"flex",flexDirection:"column",alignItems:"center",textAlign:"center",pointerEvents:"none"}}>
+      <div style={{fontFamily:"'EB Garamond',serif",fontSize:15.5,fontWeight:600,color:"white",lineHeight:1.2}}>{APP_NAME}</div>
+      {sub&&<div style={{fontSize:9,color:"rgba(255,255,255,0.55)",lineHeight:1.2,marginTop:2}}>{sub}</div>}
+    </div>
+    {admin&&<div style={{marginLeft:"auto",background:B.gold,color:B.adminDark,fontSize:7.5,fontWeight:700,letterSpacing:1.5,textTransform:"uppercase",padding:"2px 6px",borderRadius:7,zIndex:1,flexShrink:0}}>Admin</div>}
+  </div>
+);
+
+const BottomNav=({tabs,active,onSelect,bg=B.darkPurple,ac=B.green})=>(
+  <div style={{background:bg,display:"flex",borderTop:"1px solid rgba(255,255,255,0.08)",flexShrink:0}}>
+    {tabs.map(t=>(
+      <button key={t.id} onClick={()=>onSelect(t.id)} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"9px 0 8px",background:"none",border:"none",cursor:"pointer",gap:4}}>
+        {React.cloneElement(t.icon,{stroke:active===t.id?ac:"rgba(255,255,255,0.5)"})}
+        <span style={{fontSize:9,fontWeight:500,letterSpacing:0.3,color:active===t.id?ac:"rgba(255,255,255,0.5)"}}>{t.label}</span>
+      </button>
+    ))}
+  </div>
+);
+
+// ── RICH EDITOR ──
+const RichEditor=({value,onChange,placeholder})=>{
+  const ref=useRef(null);const[imgUrl,setImgUrl]=useState("");const[showImg,setShowImg]=useState(false);const mounted=useRef(false);
+  useEffect(()=>{if(!mounted.current&&ref.current){ref.current.innerHTML=value||"";mounted.current=true;}},[]);
+  const exec=(cmd,val=null)=>{document.execCommand(cmd,false,val);ref.current?.focus();};
+  const tb={padding:"5px 8px",borderRadius:6,border:`1px solid ${B.sage}`,background:"white",cursor:"pointer",color:B.adminDark,fontSize:13};
+  return(<div style={{border:`1px solid ${B.sage}`,borderRadius:10,overflow:"hidden"}}>
+    <div style={{display:"flex",flexWrap:"wrap",gap:4,padding:"7px 10px",background:"#f5f2ec",borderBottom:`1px solid ${B.sage}`}}>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H2")}}>H2</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H3")}}>H3</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("bold")}}><b>B</b></button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("italic")}}><i>I</i></button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList")}}>• List</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();setShowImg(v=>!v)}}>🖼</button>
+    </div>
+    {showImg&&<div style={{display:"flex",gap:6,padding:"7px 10px",background:"#ede9e2"}}>
+      <input value={imgUrl} onChange={e=>setImgUrl(e.target.value)} placeholder="Paste image URL…" style={{flex:1,padding:"5px 9px",borderRadius:7,border:`1px solid ${B.sage}`,fontSize:13}}/>
+      <button onMouseDown={e=>{e.preventDefault();if(!imgUrl.trim())return;exec("insertHTML",`<img src="${imgUrl}" style="max-width:100%;border-radius:8px;margin:8px 0"/>`);setImgUrl("");setShowImg(false);}} style={{...tb,background:B.green,color:"white",border:"none",padding:"5px 12px"}}>Insert</button>
+    </div>}
+    <div ref={ref} contentEditable suppressContentEditableWarning data-placeholder={placeholder||"Start writing…"} onInput={()=>onChange(ref.current.innerHTML)} className="rich-editor"/>
+  </div>);
+};
+
+// ── QUIZ EDITOR ──
+const QuizEditor=({quiz,onChange})=>{
+  const mc=quiz.mcQuestions||[],rf=quiz.reflections||[];
+  const setMC=v=>onChange({...quiz,mcQuestions:v});const setRF=v=>onChange({...quiz,reflections:v});
+  const inp={width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.sage}`,fontSize:14,boxSizing:"border-box",marginBottom:5,background:"white"};
+  return(<div style={{paddingBottom:90}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <span style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Multiple Choice ({mc.length}/10)</span>
+      {mc.length<10&&<button onClick={()=>setMC([...mc,{question:"",options:["","","",""],correct:0}])} style={{padding:"7px 13px",borderRadius:8,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer"}}>+ Add</button>}
+    </div>
+    {mc.map((q,i)=>(<div key={i} style={{background:"white",borderRadius:10,padding:13,marginBottom:12,border:`1px solid ${B.sage}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:12,color:B.purple,fontWeight:600}}>Q{i+1}</span><button onClick={()=>{const a=[...mc];a.splice(i,1);setMC(a);}} style={{background:"none",border:"none",cursor:"pointer",color:B.red,fontSize:16}}>🗑</button></div>
+      <input value={q.question} placeholder="Question…" onChange={e=>{const a=[...mc];a[i]={...a[i],question:e.target.value};setMC(a);}} style={inp}/>
+      {q.options.map((opt,j)=>(<div key={j} style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
+        <input type="radio" name={`mc${i}`} checked={q.correct===j} onChange={()=>{const a=[...mc];a[i]={...a[i],correct:j};setMC(a);}} style={{accentColor:B.green,width:16,height:16}}/>
+        <input value={opt} placeholder={`Option ${j+1}`} onChange={e=>{const a=[...mc];a[i].options[j]=e.target.value;setMC(a);}} style={{...inp,marginBottom:0,flex:1}}/>
+      </div>))}
+      <p style={{fontSize:11,color:B.sage,marginTop:5}}>● = correct answer</p>
+    </div>))}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"20px 0 12px"}}>
+      <span style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Reflection Prompts ({rf.length}/3)</span>
+      {rf.length<3&&<button onClick={()=>setRF([...rf,""])} style={{padding:"7px 13px",borderRadius:8,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer"}}>+ Add</button>}
+    </div>
+    {rf.map((r,i)=>(<div key={i} style={{display:"flex",gap:8,marginBottom:9}}>
+      <textarea value={r} rows={2} placeholder="Reflection prompt…" onChange={e=>{const a=[...rf];a[i]=e.target.value;setRF(a);}} style={{...inp,resize:"vertical",marginBottom:0,flex:1}}/>
+      <button onClick={()=>{const a=[...rf];a.splice(i,1);setRF(a);}} style={{background:"none",border:"none",cursor:"pointer",color:B.red,paddingTop:8,fontSize:16}}>🗑</button>
+    </div>))}
+  </div>);
+};
+
+// ── RESOURCES EDITOR ──
+const ResourcesEditor=({resources,onChange})=>{
+  const inp={width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.sage}`,fontSize:14,boxSizing:"border-box",marginBottom:7,background:"white"};
+  return(<div style={{paddingBottom:90}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <span style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Resources ({resources.length})</span>
+      <button onClick={()=>onChange([...resources,{title:"",type:"Read",url:"",note:""}])} style={{padding:"7px 13px",borderRadius:8,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer"}}>+ Add</button>
+    </div>
+    {resources.map((r,i)=>(<div key={i} style={{background:"white",borderRadius:10,padding:13,marginBottom:11,border:`1px solid ${B.sage}`}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:12,color:B.purple,fontWeight:600}}>Resource {i+1}</span><button onClick={()=>{const a=[...resources];a.splice(i,1);onChange(a);}} style={{background:"none",border:"none",cursor:"pointer",color:B.red,fontSize:16}}>🗑</button></div>
+      <input value={r.title} placeholder="Title" onChange={e=>{const a=[...resources];a[i]={...a[i],title:e.target.value};onChange(a);}} style={inp}/>
+      <select value={r.type} onChange={e=>{const a=[...resources];a[i]={...a[i],type:e.target.value};onChange(a);}} style={{...inp,background:"white"}}>{["Read","Watch","Listen","Visit"].map(t=><option key={t}>{t}</option>)}</select>
+      <input value={r.url} placeholder="URL" onChange={e=>{const a=[...resources];a[i]={...a[i],url:e.target.value};onChange(a);}} style={inp}/>
+      <input value={r.note} placeholder="Optional note…" onChange={e=>{const a=[...resources];a[i]={...a[i],note:e.target.value};onChange(a);}} style={{...inp,marginBottom:0}}/>
+    </div>))}
+  </div>);
+};
+
+// ── RELEASE PANEL ──
+const ReleasePanel=({title,released,scheduledDate,releaseDate,onNow,onSchedule,onUnpublish,extra=null})=>{
+  const[sd,setSd]=useState("");
+  const inp={padding:"7px 10px",borderRadius:8,border:`1.5px solid ${B.sage}`,fontSize:11,background:"white",color:B.adminDark};
+  return(<div style={{marginBottom:16,paddingBottom:16,borderBottom:`1px solid ${B.sage}40`}}>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+      <span style={{fontSize:10,fontWeight:700,letterSpacing:2,textTransform:"uppercase"}}><span style={{color:B.green}}>RELEASE</span><span style={{color:B.adminDark}}> — {title}</span></span>
+      <Badge status={released?"Released":scheduledDate?"Scheduled":"Draft"}/>
+    </div>
+    {released?(<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
+      <span style={{fontSize:11,color:B.sage}}>Released {releaseDate||""}</span>
+      <div style={{display:"flex",gap:7}}>{extra}<button onClick={onUnpublish} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${B.purple}`,color:B.purple,background:"none",fontSize:11,cursor:"pointer"}}>Unpublish</button></div>
+    </div>):(<>
+      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10}}><span style={{fontSize:12}}>📅</span><input type="date" value={sd} onChange={e=>setSd(e.target.value)} style={{...inp,flex:1}}/></div>
+      <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+        <button onClick={()=>onSchedule(sd)} style={{padding:"7px 13px",borderRadius:9,border:`1.5px solid ${B.gold}`,color:B.gold,background:"none",fontSize:11,cursor:"pointer"}}>Schedule</button>
+        <button onClick={onNow} style={{padding:"7px 13px",borderRadius:9,background:B.adminDark,color:"white",border:"none",fontSize:11,cursor:"pointer"}}>Release Now</button>
+        {extra}
+      </div>
+    </>)}
+  </div>);
+};
+
+// ── LESSON EDIT ──
+const LessonEdit=({lesson,onSave,onBack})=>{
+  const[tab,setTab]=useState("reading");
+  const[draft,setDraft]=useState({...lesson,quiz:{mcQuestions:[],reflections:[],...(lesson.quiz||{})},resources:lesson.resources||[]});
+  const[toast,setToast]=useState(null);const[saving,setSaving]=useState(false);
+  const doSave=async()=>{setSaving(true);const ok=await onSave({...draft});setSaving(false);setToast(ok?"Saved ✓":"Save failed");};
+  const rel=async(f,date=null)=>{const now=!date;const u={...draft,[f+"Released"]:now,[f+"ScheduledDate"]:date||todayISO(),[f+"ReleaseDate"]:now?fmtDate(new Date().toISOString()):null};setSaving(true);await onSave(u);setSaving(false);setDraft(u);setToast(now?`Released ✓`:`Scheduled ✓`);};
+  const unp=async f=>{const u={...draft,[f+"Released"]:false,[f+"ReleaseDate"]:null,[f+"ScheduledDate"]:null};setSaving(true);await onSave(u);setSaving(false);setDraft(u);setToast("Unpublished");};
+  return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
+    {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+    <AppHeader bg={B.adminDark} admin onBack={onBack} sub={COURSE_NAME}/>
+    <div style={{background:"#3a2a4e",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
+      <div><div style={{fontSize:8.5,color:"rgba(255,255,255,0.45)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:2}}>Lesson {lesson.lessonNumber}</div>
+        <input value={draft.title} onChange={e=>setDraft(p=>({...p,title:e.target.value}))} style={{background:"transparent",border:"none",color:"white",fontSize:16,fontWeight:600,outline:"none",fontFamily:"'EB Garamond',serif"}}/></div>
+      <Badge status={lessonStatus(draft)}/>
+    </div>
+    <div style={{display:"flex",background:"white",borderBottom:`1px solid ${B.sage}`,flexShrink:0}}>
+      {["reading","summary","quiz","resources"].map(t=>(<button key={t} onClick={()=>setTab(t)} style={{flex:1,padding:"10px 2px",border:"none",background:"none",fontSize:11,fontWeight:tab===t?600:400,color:tab===t?B.adminDark:B.purple,borderBottom:tab===t?`2.5px solid ${B.adminDark}`:"2.5px solid transparent",cursor:"pointer",textTransform:"capitalize"}}>{t}</button>))}
+    </div>
+    <div style={{flex:1,overflow:"auto",padding:16}}>
+      {tab==="reading"&&<><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><span style={{fontSize:12,color:B.purple}}>Reading time (mins):</span><input type="number" min="1" max="60" value={draft.readingMins||5} onChange={e=>setDraft(p=>({...p,readingMins:parseInt(e.target.value)||5}))} style={{width:60,padding:"5px 8px",borderRadius:7,border:`1px solid ${B.sage}`,fontSize:13}}/></div>
+        <RichEditor value={draft.reading} onChange={v=>setDraft(p=>({...p,reading:v}))} placeholder="Write the pre-class reading…"/>
+        <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Pre-Class Reading" released={draft.readingReleased} scheduledDate={draft.readingScheduledDate} releaseDate={draft.readingReleaseDate} onNow={()=>rel("reading")} onSchedule={d=>rel("reading",d)} onUnpublish={()=>unp("reading")}/></div></>}
+      {tab==="summary"&&<><RichEditor value={draft.summary} onChange={v=>setDraft(p=>({...p,summary:v}))} placeholder="Write the session summary…"/>
+        <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Session Summary" released={draft.summaryReleased} scheduledDate={draft.summaryScheduledDate} releaseDate={draft.summaryReleaseDate} onNow={()=>rel("summary")} onSchedule={d=>rel("summary",d)} onUnpublish={()=>unp("summary")} extra={<button onClick={()=>window.print()} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,color:B.sage,background:"none",fontSize:11,cursor:"pointer"}}>⬇ PDF</button>}/></div></>}
+      {tab==="quiz"&&<><QuizEditor quiz={draft.quiz} onChange={q=>setDraft(p=>({...p,quiz:q}))}/>
+        <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Quiz & Reflections" released={draft.quizReleased} scheduledDate={draft.quizScheduledDate} releaseDate={draft.quizReleaseDate} onNow={()=>rel("quiz")} onSchedule={d=>rel("quiz",d)} onUnpublish={()=>unp("quiz")}/></div></>}
+      {tab==="resources"&&<><ResourcesEditor resources={draft.resources} onChange={r=>setDraft(p=>({...p,resources:r}))}/>
+        <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Resources" released={draft.resourcesReleased} scheduledDate={null} releaseDate={null} onNow={()=>rel("resources")} onSchedule={d=>rel("resources",d)} onUnpublish={()=>unp("resources")}/></div></>}
+    </div>
+    <button onClick={doSave} disabled={saving} style={{position:"fixed",bottom:24,right:20,background:saving?"#888":B.adminDark,color:"white",border:"none",borderRadius:28,padding:"12px 20px",fontSize:13,fontWeight:600,cursor:saving?"wait":"pointer",boxShadow:"0 4px 18px rgba(44,31,58,0.3)",zIndex:100}}>{saving?"⏳ Saving…":"💾 Save"}</button>
+  </div>);
+};
+
+// ── ADMIN SETTINGS ──
+const AdminSettings=({settings,onSave})=>{
+  const[s,setS]=useState({...settings,whitelist:[...(settings.whitelist||[])]});
+  const[newFirst,setNewFirst]=useState("");const[newSurname,setNewSurname]=useState("");
+  const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
+  const add=()=>{
+    if(!newFirst.trim()||!newSurname.trim())return;
+    const full=`${newFirst.trim()} ${newSurname.trim()}`;
+    setS(p=>({...p,whitelist:[...p.whitelist,full]}));
+    setNewFirst("");setNewSurname("");
+  };
+  const rem=name=>setS(p=>({...p,whitelist:p.whitelist.filter(x=>x!==name)}));
+  const doSave=async()=>{setSaving(true);await onSave(s);setSaving(false);setToast("Settings saved ✓");};
+  return(<div style={{padding:14,paddingBottom:80}}>
+    {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:14}}>Course Settings</div>
+    <div style={{background:"white",borderRadius:12,padding:"14px 15px",marginBottom:14,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+        <div><div style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Course Registration</div>
+          <div style={{fontSize:11,color:B.purple,marginTop:2}}>{s.courseLocked?"Locked — no new students can join":"Open — new students can register"}</div></div>
+        <button onClick={()=>setS(p=>({...p,courseLocked:!p.courseLocked}))} style={{padding:"8px 16px",borderRadius:10,background:s.courseLocked?B.red:B.green,color:"white",border:"none",fontSize:12,fontWeight:600,cursor:"pointer"}}>{s.courseLocked?"Unlock":"Lock"}</button>
+      </div>
+      <div style={{fontSize:11,color:B.sage,fontStyle:"italic"}}>Lock the course once all students have registered.</div>
+    </div>
+    <div style={{background:"white",borderRadius:12,padding:"14px 15px",boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      <div style={{fontWeight:600,fontSize:14,color:B.adminDark,marginBottom:4}}>Approved Students ({s.whitelist.length})</div>
+      <div style={{fontSize:11,color:B.purple,marginBottom:12}}>First name and surname must match exactly how students enter them.</div>
+      <div style={{display:"flex",gap:7,marginBottom:7}}>
+        <input value={newFirst} onChange={e=>setNewFirst(e.target.value)} placeholder="First name…" style={{flex:1,padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",outline:"none"}}/>
+        <input value={newSurname} onChange={e=>setNewSurname(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="Surname…" style={{flex:1,padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",outline:"none"}}/>
+      </div>
+      <button onClick={add} style={{width:"100%",padding:"9px 14px",borderRadius:9,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer",marginBottom:12}}>+ Add Student</button>
+      {s.whitelist.map(name=>(<div key={name} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 11px",background:"#f7f5f2",borderRadius:9,marginBottom:6}}>
+        <span style={{fontFamily:"'EB Garamond',serif",fontSize:15,color:B.adminDark}}>{name}</span>
+        <button onClick={()=>rem(name)} style={{background:"none",border:"none",color:B.red,cursor:"pointer",fontSize:15}}>✕</button>
+      </div>))}
+      {s.whitelist.length===0&&<p style={{color:B.sage,fontSize:13,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No students added yet.</p>}
+    </div>
+    <button onClick={doSave} disabled={saving} style={{width:"100%",marginTop:16,padding:"13px",borderRadius:12,background:saving?"#888":B.adminDark,color:"white",border:"none",fontSize:13,fontWeight:500,cursor:"pointer",letterSpacing:0.5}}>{saving?"Saving…":"Save Settings"}</button>
+  </div>);
+};
+
+// ── RESPONSES TAB ──
+const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
+  const[by,setBy]=useState("lesson");const[selL,setSelL]=useState(null);const[selS,setSelS]=useState(null);
+  const released=lessons.filter(l=>l.readingReleased);
+  const students=[...new Set(responses.map(r=>r.studentName))].sort();
+  const list=by==="lesson"?responses.filter(r=>r.lessonId===selL):responses.filter(r=>r.studentName===selS);
+  return(<div style={{padding:14,paddingBottom:80}}>
+    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:12}}>Responses</div>
+    <div style={{display:"flex",background:"white",borderRadius:10,padding:3,marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.07)"}}>
+      {["lesson","student"].map(f=>(<button key={f} onClick={()=>setBy(f)} style={{flex:1,padding:"7px",borderRadius:8,border:"none",fontSize:11,cursor:"pointer",fontWeight:500,background:by===f?B.adminDark:"none",color:by===f?"white":B.purple,textTransform:"capitalize"}}>{f==="lesson"?"By Lesson":"By Student"}</button>))}
+    </div>
+    {by==="lesson"?(<select value={selL||""} onChange={e=>setSelL(Number(e.target.value))} style={{width:"100%",padding:"10px 13px",borderRadius:11,border:`1.5px solid #C5BBCE`,fontSize:14,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",marginBottom:12}}>
+      <option value="">Select a lesson…</option>{released.map(l=><option key={l.id} value={l.id}>{l.lessonNumber}. {l.title}</option>)}
+    </select>):(<select value={selS||""} onChange={e=>setSelS(e.target.value)} style={{width:"100%",padding:"10px 13px",borderRadius:11,border:`1.5px solid #C5BBCE`,fontSize:14,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",marginBottom:12}}>
+      <option value="">Select a student…</option>{students.map(s=><option key={s} value={s}>{s}</option>)}
+    </select>)}
+    {(selL||selS)&&list.length===0&&<p style={{color:B.purple,fontSize:14,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No submissions yet.</p>}
+    {list.map((r,i)=>{
+      const l=lessons.find(x=>x.id===r.lessonId);
+      const hasFb=feedback.some(f=>f.lessonId===r.lessonId&&f.studentName===r.studentName);
+      return(<div key={i} onClick={()=>onOpen(r)} style={{background:"white",borderRadius:12,padding:"12px 13px",marginBottom:8,boxShadow:"0 2px 8px rgba(44,31,58,0.06)",cursor:"pointer"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
+          <div style={{fontFamily:"'EB Garamond',serif",fontSize:16,fontWeight:600,color:B.adminDark}}>{by==="lesson"?r.studentName:`Lesson ${r.lessonId} — ${l?.title||""}`}</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            {hasFb&&<span style={{fontSize:9,background:"#fdf3d0",color:"#8a6800",padding:"2px 7px",borderRadius:8,fontWeight:600}}>Feedback ✓</span>}
+            <span style={{background:"#ede9f2",borderRadius:9,padding:"3px 9px",fontSize:11,fontWeight:600,color:B.gold}}>{r.score}/{l?.quiz?.mcQuestions?.length||"?"}</span>
+          </div>
+        </div>
+        <div style={{fontSize:9.5,color:B.purple,marginBottom:5}}>{fmtDT(r.submittedAt)}</div>
+        {r.reflections?.[0]&&<div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.sage,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{r.reflections[0]}"</div>}
+      </div>);
+    })}
+  </div>);
+};
+
+// ── FEEDBACK WRITER ──
+const FeedbackWriter=({lesson,response,existingFb,onBack})=>{
+  const[overall,setOverall]=useState(existingFb?.overall||{stamp:null,note:"",resourceTitle:"",resourceUrl:""});
+  const[rFb,setRFb]=useState(existingFb?.reflections||{});
+  const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
+  const rfPs=lesson?.quiz?.reflections||[];
+  const doSave=async()=>{setSaving(true);const key=response.studentName.replace(/\s+/g,"_");const ok=await saveFeedback(response.lessonId,key,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,savedAt:new Date().toISOString()});setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
+  const ta={width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.sage}`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",resize:"none",minHeight:60,lineHeight:1.6,marginBottom:8,boxSizing:"border-box"};
+  return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
+    {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+    <AppHeader bg={B.adminDark} admin onBack={onBack} sub={COURSE_NAME}/>
+    <div style={{flex:1,overflow:"auto",padding:14}}>
+      <div style={{background:"white",borderRadius:11,padding:"11px 13px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+        <div style={{fontFamily:"'EB Garamond',serif",fontSize:17,fontWeight:600,color:B.adminDark,marginBottom:2}}>{response.studentName}</div>
+        <div style={{fontSize:9.5,color:B.purple}}>Lesson {response.lessonId} · {fmtDT(response.submittedAt)} · Score {response.score}/{lesson?.quiz?.mcQuestions?.length||0}</div>
+      </div>
+      <div style={{background:"white",borderRadius:11,padding:"13px 14px",marginBottom:12,border:"1.5px dashed #C5BBCE"}}>
+        <SL c="Overall Feedback" color={B.green}/>
+        <div style={{fontSize:9,fontWeight:600,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,marginBottom:7}}>Choose a stamp</div>
+        <StampSel selected={overall.stamp} onSelect={s=>setOverall(p=>({...p,stamp:s}))}/>
+        {overall.stamp==="seeds"&&<div style={{background:"#fdf3d0",borderRadius:9,padding:"9px 11px",marginBottom:8,border:"1px solid #E0B51530"}}>
+          <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:"#8a6800",fontWeight:600,marginBottom:5}}>Add a resource</div>
+          <input value={overall.resourceTitle} onChange={e=>setOverall(p=>({...p,resourceTitle:e.target.value}))} placeholder="Title…" style={{...ta,minHeight:"auto",marginBottom:5,fontSize:12}}/>
+          <input value={overall.resourceUrl} onChange={e=>setOverall(p=>({...p,resourceUrl:e.target.value}))} placeholder="Link (optional)…" style={{...ta,minHeight:"auto",marginBottom:0,fontSize:12}}/>
+        </div>}
+        <textarea value={overall.note} onChange={e=>setOverall(p=>({...p,note:e.target.value}))} placeholder="Write your overall feedback…" style={ta}/>
+        <button onClick={doSave} disabled={saving} style={{width:"100%",padding:"11px",borderRadius:10,background:B.adminDark,color:"white",border:"none",fontSize:12,fontWeight:500,cursor:"pointer",letterSpacing:0.5}}>{saving?"Saving…":"Send Feedback"}</button>
+      </div>
+      {rfPs.map((prompt,i)=>{
+        const rf=rFb[i]||{stamp:null,note:"",resourceTitle:"",resourceUrl:""};
+        return(<div key={i} style={{background:"white",borderRadius:11,padding:"13px 14px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+          <SL c={`Reflection ${i+1}`} color={B.green}/>
+          <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.purple,marginBottom:6,lineHeight:1.5}}>{prompt}</div>
+          <div style={{fontFamily:"'EB Garamond',serif",fontSize:14,color:B.adminDark,lineHeight:1.7,padding:"8px 10px",background:"#f7f5f2",borderRadius:8,marginBottom:10}}>{response.reflections?.[i]||<em style={{color:B.sage}}>No response</em>}</div>
+          <StampSel selected={rf.stamp} onSelect={s=>setRFb(p=>({...p,[i]:{...rf,stamp:s}}))}/>
+          {rf.stamp==="seeds"&&<div style={{background:"#fdf3d0",borderRadius:9,padding:"9px 11px",marginBottom:8,border:"1px solid #E0B51530"}}>
+            <input value={rf.resourceTitle} onChange={e=>setRFb(p=>({...p,[i]:{...rf,resourceTitle:e.target.value}}))} placeholder="Resource title…" style={{...ta,minHeight:"auto",marginBottom:5,fontSize:12}}/>
+            <input value={rf.resourceUrl} onChange={e=>setRFb(p=>({...p,[i]:{...rf,resourceUrl:e.target.value}}))} placeholder="Link…" style={{...ta,minHeight:"auto",marginBottom:0,fontSize:12}}/>
+          </div>}
+          <textarea value={rf.note} onChange={e=>setRFb(p=>({...p,[i]:{...rf,note:e.target.value}}))} placeholder="Write your note…" style={{...ta,minHeight:50}}/>
+        </div>);
+      })}
+    </div>
+  </div>);
+};
+
+// ── STUDENT PROGRESS ──
+const ProgressTab=({lessons,responses,settings})=>{
+  const[exp,setExp]=useState(null);
+  const rel=lessons.filter(l=>l.readingReleased).length;
+  const students=settings.whitelist||[];
+  const Circle=({f})=>(<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill={f?"#A39C0F":"none"} stroke={f?"#A39C0F":"#C5BBCE"} strokeWidth="1.5"/></svg>);
+  return(<div style={{padding:14,paddingBottom:80}}>
+    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:4}}>Student Progress</div>
+    <div style={{fontSize:9.5,color:B.purple,marginBottom:12}}>{students.length} students · {rel} of 20 lessons released</div>
+    <div style={{background:"white",borderRadius:12,padding:"11px 13px",marginBottom:12,display:"flex",justifyContent:"space-around",boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      {[{n:students.length,l:"Students",c:B.adminDark},{n:students.filter(s=>responses.filter(r=>r.studentName===s).length>=rel).length,l:"On Track",c:B.green},{n:students.filter(s=>{const c=responses.filter(r=>r.studentName===s).length;return c<rel&&c>0;}).length,l:"Pending",c:B.gold},{n:students.filter(s=>responses.filter(r=>r.studentName===s).length===0&&rel>0).length,l:"Behind",c:B.red}].map(s=>(<div key={s.l} style={{textAlign:"center"}}>
+        <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:600,color:s.c,lineHeight:1}}>{s.n}</div>
+        <div style={{fontSize:8,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,marginTop:2}}>{s.l}</div>
+      </div>))}
+    </div>
+    <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap",justifyContent:"center"}}>
+      {[{c:"#A39C0F",l:"Reading"},{c:"#A39C0F",l:"Summary"},{c:"#A39C0F",l:"Quiz"},{c:"none",l:"Pending"}].map((x,i)=>(<div key={i} style={{display:"flex",alignItems:"center",gap:4}}>
+        <svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill={x.c} stroke={x.c==="none"?"#C5BBCE":x.c} strokeWidth="1.5"/></svg>
+        <span style={{fontSize:9,color:B.purple}}>{x.l}</span>
+      </div>))}
+    </div>
+    <div style={{background:"white",borderRadius:10,padding:"9px 13px",marginBottom:12,textAlign:"center",boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      <div style={{fontSize:8.5,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:B.purple}}>Each lesson tracks 3 steps</div>
+    </div>
+    {students.length===0&&<p style={{color:B.purple,fontSize:14,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No students registered yet.</p>}
+    {students.map(name=>{
+      const sub=responses.filter(r=>r.studentName===name);
+      const done=sub.length;const avg=sub.length?Math.round((sub.reduce((a,r)=>a+(r.score||0),0)/sub.length)*10)/10:null;
+      const pct=rel>0?Math.round((done/rel)*100):0;const isExp=exp===name;
+      const prog=lessons.map(l=>{const r=sub.find(x=>x.lessonId===l.id);return{reading:l.readingReleased,summary:l.summaryReleased,quiz:!!r};});
+      return(<div key={name} style={{background:"white",borderRadius:13,marginBottom:9,boxShadow:"0 2px 8px rgba(44,31,58,0.06)",overflow:"hidden"}}>
+        <div onClick={()=>setExp(isExp?null:name)} style={{padding:"12px 13px",cursor:"pointer"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+            <div style={{fontFamily:"'EB Garamond',serif",fontSize:16,fontWeight:600,color:B.adminDark}}>{name}</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {avg&&<span style={{background:"#fdf3d0",color:"#8a6800",borderRadius:8,padding:"2px 8px",fontSize:9.5,fontWeight:600}}>Avg {avg}/10</span>}
+              <span style={{color:"#C5BBCE",fontSize:13,display:"inline-block",transform:isExp?"rotate(90deg)":"none",transition:"transform 0.2s"}}>›</span>
+            </div>
+          </div>
+          <div style={{height:4,background:"#f0ede8",borderRadius:4,marginBottom:4}}><div style={{height:4,borderRadius:4,background:`linear-gradient(to right,${B.green},${B.gold})`,width:`${pct}%`}}/></div>
+          <div style={{fontSize:9,color:B.purple}}>{done} / {rel} lessons · quiz submitted</div>
+        </div>
+        {isExp&&<div style={{padding:"0 13px 12px",borderTop:"1px solid #f0ede8"}}>
+          <div style={{fontSize:8.5,letterSpacing:2,textTransform:"uppercase",color:B.purple,fontWeight:600,padding:"9px 0 7px",textAlign:"center"}}>Lesson by Lesson — All 20</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center"}}>
+            {prog.map((p,i)=>(<div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
+              <div style={{fontSize:7.5,color:"#8A7099"}}>{`L${i+1}`}</div>
+              <div style={{display:"flex",gap:2}}><Circle f={p.reading}/><Circle f={p.summary}/><Circle f={p.quiz}/></div>
+            </div>))}
+          </div>
+        </div>}
+      </div>);
+    })}
+  </div>);
+};
+
+// ── ADMIN DASHBOARD ──
+const AdminDashboard=({lessons,responses,feedback,settings,onSaveLesson,onSaveSettings,onRefresh})=>{
+  const[tab,setTab]=useState("lessons");const[editing,setEditing]=useState(null);const[openResp,setOpenResp]=useState(null);
+  if(editing){const cur=lessons.find(l=>l.id===editing.id)||editing;return<LessonEdit lesson={cur} onSave={async upd=>{const ok=await onSaveLesson(upd);setEditing(upd);return ok;}} onBack={()=>{setEditing(null);onRefresh();}}/>;}
+  if(openResp){const l=lessons.find(x=>x.id===openResp.lessonId);const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);return<FeedbackWriter lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}}/>;}
+  const adminTabs=[{id:"lessons",label:"Lessons",icon:<IBook/>},{id:"responses",label:"Responses",icon:<IDoc/>},{id:"progress",label:"Student Progress",icon:<IPeople/>}];
+  return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
+    <AppHeader bg={B.adminDark} admin sub={COURSE_NAME}/>
+    <div style={{flex:1,overflow:"auto"}}>
+      {tab==="lessons"&&<div style={{padding:14,paddingBottom:80}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark}}>All Lessons</div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>setTab("settings")} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>⚙ Settings</button>
+            <button onClick={onRefresh} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>↻</button>
+          </div>
+        </div>
+        {["Released","Reading Live","Scheduled","Draft"].map(grp=>{
+          const ls=lessons.filter(l=>lessonStatus(l)===grp);if(ls.length===0)return null;
+          return(<div key={grp}><div style={{fontSize:8.5,letterSpacing:2.5,textTransform:"uppercase",color:B.purple,fontWeight:600,margin:"14px 0 8px"}}>{grp}</div>
+            {ls.map(l=>(<div key={l.id} onClick={()=>setEditing(l)} style={{background:"white",borderRadius:12,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",boxShadow:"0 2px 8px rgba(44,31,58,0.07)"}}>
+              <div style={{flex:1,minWidth:0,marginRight:10}}>
+                <div style={{fontWeight:600,fontSize:15,color:B.adminDark,fontFamily:"'EB Garamond',serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.lessonNumber}. {l.title}</div>
+                <div style={{fontSize:10,color:B.purple,marginTop:2}}>{l.readingReleased?`Released ${l.readingReleaseDate||""}`:l.readingScheduledDate?`Scheduled ${fmtDate(l.readingScheduledDate)}`:"Not yet scheduled"}</div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8}}><Badge status={lessonStatus(l)}/><span style={{color:"#C5BBCE",fontSize:14}}>›</span></div>
+            </div>))}
+          </div>);
+        })}
+      </div>}
+      {tab==="responses"&&<ResponsesTab lessons={lessons} responses={responses} feedback={feedback} onOpen={r=>setOpenResp(r)}/>}
+      {tab==="progress"&&<ProgressTab lessons={lessons} responses={responses} settings={settings}/>}
+      {tab==="settings"&&<AdminSettings settings={settings} onSave={async s=>{await onSaveSettings(s);setTab("lessons");}}/>}
+    </div>
+    {tab!=="settings"&&<BottomNav tabs={adminTabs} active={tab} onSelect={setTab} bg={B.adminDark} ac={B.gold}/>}
+  </div>);
+};
+
+// ── LESSON VIEW (Student) ──
+const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=false})=>{
+  const existing=responses.find(r=>r.lessonId===lesson.id&&r.studentName===studentName);
+  const[mcA,setMcA]=useState(existing?.mcAnswers||[]);
+  const[reflT,setReflT]=useState(existing?.reflections||(lesson.quiz?.reflections||[]).map(()=>""));
+  const[submitted,setSubmitted]=useState(!!existing);
+  const[submitting,setSubmitting]=useState(false);
+  const[showAllQ,setShowAllQ]=useState(false);const[showAllR,setShowAllR]=useState(false);
+  const mcQs=lesson.quiz?.mcQuestions||[];const rfPs=lesson.quiz?.reflections||[];
+  const score=submitted?mcQs.reduce((s,q,i)=>s+(mcA[i]===q.correct?1:0),0):null;
+  const myFb=feedback.find(f=>f.lessonId===lesson.id&&f.studentName===studentName);
+  const showSum=readOnly||lesson.summaryReleased;const showQ=readOnly||lesson.quizReleased;
+  const submit=async()=>{if(mcQs.length>0&&mcA.length<mcQs.length){alert("Please answer all questions.");return;}setSubmitting(true);const sc=mcQs.reduce((s,q,i)=>s+(mcA[i]===q.correct?1:0),0);await onSubmitQuiz({lessonId:lesson.id,studentName,submittedAt:new Date().toISOString(),mcAnswers:mcA,score:sc,reflections:reflT});setSubmitting(false);setSubmitted(true);};
+  const RP=({i,q})=>{const sel=mcA[i]??null;const opts=q.options.map((opt,j)=>{const iC=j===q.correct,iS=j===sel;let bg="white",border=`1px solid ${B.sage}`;if(submitted){if(iC){bg="#f0faf0";border=`1px solid #A39C0F30`;}if(iS&&!iC){bg="#fff0f0";border=`1px solid #C0392B25`;}}else if(iS){bg="rgba(163,156,15,0.1)";border=`1px solid ${B.green}`;}
+    return(<div key={j} onClick={()=>{if(!submitted&&!readOnly){const a=[...mcA];a[i]=j;setMcA(a);}}} style={{display:"flex",alignItems:"center",gap:7,borderRadius:8,padding:"7px 10px",marginBottom:4,border,background:bg,cursor:submitted||readOnly?"default":"pointer"}}>
+      {submitted?(iC?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A39C0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>:iS?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>:<div style={{width:10,height:10,borderRadius:"50%",border:"1.5px solid #C5BBCE",flexShrink:0}}/>):<div style={{width:10,height:10,borderRadius:"50%",border:`1.5px solid ${iS?B.green:"#C5BBCE"}`,background:iS?"rgba(163,156,15,0.3)":"none",flexShrink:0}}/>}
+      <span style={{fontFamily:"'EB Garamond',serif",fontSize:13.5,fontWeight:submitted&&iC?600:400,color:submitted&&iS&&!iC?"#C0392B":submitted&&iC?B.darkPurple:"#5B4969"}}>{opt}</span>
+      {submitted&&iS&&!iC&&<span style={{fontSize:8,color:"#C0392B",marginLeft:2}}>your answer</span>}
+    </div>);});
+    return(<div style={{marginBottom:12}}><div style={{fontSize:12,color:B.darkPurple,fontWeight:500,marginBottom:6,lineHeight:1.4}}>{i+1}. {q.question}</div>{opts}</div>);};
+
+  return(<div style={{padding:"18px 16px 40px",fontFamily:"'EB Garamond',serif"}} className="fade-in">
+    {myFb&&<div style={{background:`linear-gradient(135deg,${B.darkPurple},#7B6B8A)`,borderRadius:12,padding:"11px 13px",marginBottom:14,display:"flex",alignItems:"center",justifyContent:"center",gap:9,textAlign:"center"}}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div><div style={{fontSize:11,fontWeight:600,color:"white",marginBottom:2}}>Your teacher has left feedback</div><div style={{fontSize:10,color:"rgba(255,255,255,0.65)"}}>Lesson {lesson.lessonNumber} — {lesson.title}</div></div>
+    </div>}
+    <SL c={`Lesson ${lesson.lessonNumber} · Pre-Class Reading`}/>
+    <h1 style={{fontSize:26,color:B.darkPurple,fontWeight:600,margin:"0 0 16px",lineHeight:1.2}}>{lesson.title}</h1>
+    {lesson.reading?<div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.reading}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
+    <Div/><SL c="Session Summary"/>
+    {showSum?lesson.summary?<div style={{background:"rgba(163,156,15,0.07)",borderRadius:12,padding:"16px 18px",border:`1px solid ${B.sage}30`}}><div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.summary}}/></div>:<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>Summary not yet available.</p>
+      :<div style={{background:"rgba(138,112,153,0.07)",borderRadius:12,padding:"16px 18px",border:`1px dashed ${B.sage}`,textAlign:"center"}}><p style={{color:B.purple,fontSize:16,fontStyle:"italic"}}>The session summary will appear here after class.</p><button style={{width:"100%",marginTop:10,padding:"11px",borderRadius:10,background:B.darkPurple,color:"white",border:"none",fontSize:12,fontWeight:400,opacity:0.55,cursor:"default",letterSpacing:0.6}}>Available After Class</button></div>}
+    <Div/><SL c="Quiz & Reflections"/>
+    {showQ?(submitted?(<>
+      <div style={{background:`linear-gradient(135deg,${B.darkPurple},#7B6B8A)`,borderRadius:14,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+        <div><div style={{fontFamily:"'EB Garamond',serif",fontSize:26,fontWeight:500,color:"white",lineHeight:1}}>{score}/{mcQs.length}</div><div style={{fontSize:8.5,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,0.5)",marginTop:3}}>Quiz Score</div></div>
+        <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.65)",marginBottom:4}}><span style={{color:"#d4af37",fontWeight:600}}>{score} correct</span></div><div style={{fontSize:11,color:"rgba(255,255,255,0.65)"}}><span style={{color:"#f4a58a",fontWeight:600}}>{mcQs.length-score} incorrect</span></div></div>
+      </div>
+      {myFb?.overall?.stamp&&<div style={{background:"white",borderRadius:11,padding:"12px 13px",marginBottom:12,borderLeft:`3px solid ${B.metalGold}`,boxShadow:"0 2px 8px rgba(91,73,105,0.07)"}}>
+        <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:7}}>From your teacher</div>
+        <StampShow stampId={myFb.overall.stamp}/>
+        {myFb.overall.note&&<div style={{fontFamily:"'EB Garamond',serif",fontSize:14,color:B.adminDark,lineHeight:1.7,marginBottom:6}}>{myFb.overall.note}</div>}
+        {myFb.overall.resourceTitle&&<div style={{background:"#f7f5f2",borderRadius:8,padding:"8px 10px",display:"flex",alignItems:"center",gap:7}}>
+          <IBook stroke={B.green} size={13}/><span style={{fontSize:11,color:B.darkPurple,flex:1}}>{myFb.overall.resourceTitle}</span>
+          {myFb.overall.resourceUrl&&<a href={myFb.overall.resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:B.green,fontWeight:600,textDecoration:"none"}}>Open ↗</a>}
+        </div>}
+      </div>}
+      <SL c="QUIZ" color={B.darkPurple}/>
+      {(showAllQ?mcQs:mcQs.slice(0,1)).map((q,i)=><RP key={i} i={i} q={q}/>)}
+      {mcQs.length>1&&<button onClick={()=>setShowAllQ(v=>!v)} style={{width:"100%",padding:"10px",borderRadius:10,background:"white",color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.08)",marginBottom:14}}>{showAllQ?"Hide questions ↑":`Review all ${mcQs.length} questions ↓`}</button>}
+      <Div/><SL c="REFLECTIONS" color={B.darkPurple}/>
+      {(showAllR?rfPs:rfPs.slice(0,1)).map((prompt,i)=>{const fb=myFb?.reflections?.[i];return(<div key={i} style={{marginBottom:12}}>
+        <div style={{fontSize:12,color:B.darkPurple,fontWeight:500,marginBottom:6}}>{prompt}</div>
+        <div style={{background:B.linen,borderRadius:10,padding:"10px 13px",fontFamily:"'EB Garamond',serif",fontSize:15,color:B.darkPurple,lineHeight:1.7,marginBottom:fb?.stamp?8:0}}>{reflT[i]||<em style={{color:B.sage}}>No response.</em>}</div>
+        {fb?.stamp&&<div style={{background:"white",borderRadius:10,padding:"10px 12px",borderLeft:`3px solid ${B.metalGold}`,marginTop:6}}>
+          <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:6}}>From your teacher</div>
+          <StampShow stampId={fb.stamp}/>
+          {fb.note&&<div style={{fontFamily:"'EB Garamond',serif",fontSize:13,color:B.adminDark,lineHeight:1.65,marginBottom:6}}>{fb.note}</div>}
+        </div>}
+      </div>);})}
+      {rfPs.length>1&&<button onClick={()=>setShowAllR(v=>!v)} style={{width:"100%",padding:"10px",borderRadius:10,background:"white",color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.08)"}}>{showAllR?"Hide Reflections ↑":"Show Remaining Reflections ↓"}</button>}
+    </>):(mcQs.length>0||rfPs.length>0?(<>
+      {mcQs.map((q,i)=><RP key={i} i={i} q={q}/>)}
+      {rfPs.map((prompt,i)=>(<div key={i} style={{marginBottom:14}}>
+        <div style={{fontSize:13,color:B.darkPurple,fontWeight:500,marginBottom:8}}>{prompt}</div>
+        <textarea value={reflT[i]||""} rows={4} onChange={e=>{const r=[...reflT];r[i]=e.target.value;setReflT(r);}} placeholder="Write your reflection…" style={{width:"100%",padding:"11px 13px",borderRadius:10,border:`1px solid ${B.sage}`,fontFamily:"'EB Garamond',serif",fontSize:16,resize:"vertical",boxSizing:"border-box",background:"white"}}/>
+      </div>))}
+      {!readOnly&&<button onClick={submit} disabled={submitting} style={{width:"100%",padding:"13px",borderRadius:10,background:submitting?"#888":B.green,color:"white",border:"none",fontSize:14,fontWeight:500,cursor:submitting?"wait":"pointer",marginTop:4,letterSpacing:0.5}}>{submitting?"Submitting…":"Submit Quiz"}</button>}
+    </>):<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>No quiz added yet.</p>))
+    :<div style={{background:"rgba(138,112,153,0.07)",borderRadius:12,padding:"16px 18px",border:`1px dashed ${B.sage}`,textAlign:"center"}}><p style={{color:B.purple,fontSize:16,fontStyle:"italic"}}>The quiz will be available after class.</p><button style={{width:"100%",marginTop:10,padding:"11px",borderRadius:10,background:B.darkPurple,color:"white",border:"none",fontSize:12,fontWeight:400,opacity:0.55,cursor:"default",letterSpacing:0.6}}>Available After Class</button></div>}
+    {lesson.resources?.length>0&&lesson.resourcesReleased&&(<><Div/><SL c="Recommended Resources"/>
+      {lesson.resources.map((r,i)=>(<div key={i} style={{background:"white",borderRadius:12,padding:"12px 14px",marginBottom:8,border:`1px solid ${B.sage}25`,boxShadow:"0 2px 8px rgba(91,73,105,0.06)"}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:10}}>
+          <div style={{flex:1}}><div style={{fontWeight:500,fontSize:13,color:B.darkPurple,marginBottom:4}}>{r.title}</div>{r.note&&<div style={{fontSize:12,color:B.sage,marginBottom:6,fontStyle:"italic",lineHeight:1.5}}>{r.note}</div>}<TypePill type={r.type}/></div>
+          {r.url&&<a href={r.url} target="_blank" rel="noopener noreferrer" style={{color:B.green,fontSize:12,fontWeight:600,textDecoration:"none",whiteSpace:"nowrap"}}>Open ↗</a>}
+        </div>
+      </div>))}
+    </>)}
+  </div>);
+};
+
+// ── STUDENT DASHBOARD ──
+const StudentDashboard=({studentName,lessons,responses,feedback,onSubmitQuiz})=>{
+  const[tab,setTab]=useState("week");const[open,setOpen]=useState(null);const[reflL,setReflL]=useState(null);
+  const released=lessons.filter(l=>l.readingReleased).sort((a,b)=>a.lessonNumber-b.lessonNumber);
+  const latest=released[released.length-1]||null;const relCount=released.length;
+  const myResp=responses.filter(r=>r.studentName===studentName);const done=myResp.length;
+  const navTabs=[{id:"week",label:"This Week",icon:<IBook/>},{id:"bank",label:"All Lessons",icon:<IFan/>},{id:"reflections",label:"My Reflections",icon:<IHeart/>}];
+  if(open)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}><AppHeader sub={open.title} onBack={()=>setOpen(null)}/><div style={{flex:1,overflow:"auto"}}><LessonView lesson={open} studentName={studentName} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz} readOnly/></div></div>);
+  return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
+    <AppHeader sub={`${COURSE_NAME} · ${studentName}`}/>
+    <div style={{flex:1,overflow:"auto",paddingBottom:64}}>
+      {tab==="week"&&(latest?(<>
+        <div style={{background:`linear-gradient(135deg,${B.darkPurple},#7B6B8A)`,margin:"14px 14px 0",borderRadius:16,padding:"14px 16px 12px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+            <div><div style={{fontFamily:"'EB Garamond',serif",fontSize:19,fontWeight:500,color:"white",lineHeight:1.2,marginBottom:2}}><span style={{fontStyle:"italic"}}>Namaste,</span> <span style={{fontStyle:"normal"}}>{studentName.split(" ")[0]}</span></div><div style={{fontSize:10,color:"rgba(255,255,255,0.5)"}}>Keep going — you're doing well</div></div>
+            <div style={{background:"rgba(255,255,255,0.12)",borderRadius:16,padding:"6px 12px",textAlign:"center",flexShrink:0}}>
+              <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:"white",lineHeight:1}}>{done}</div>
+              <div style={{fontSize:8,letterSpacing:1.5,textTransform:"uppercase",color:"rgba(255,255,255,0.48)",marginTop:1}}>of {relCount}</div>
+            </div>
+          </div>
+          <div style={{height:2.5,background:"rgba(255,255,255,0.15)",borderRadius:4}}><div style={{height:2.5,borderRadius:4,background:B.gold,width:relCount>0?`${Math.round((done/relCount)*100)}%`:"0%"}}/></div>
+        </div>
+        <LessonView lesson={latest} studentName={studentName} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz}/>
+      </>):<div style={{padding:"60px 24px",textAlign:"center"}}><div style={{display:"flex",justifyContent:"center",marginBottom:20}}><LotusImg size={52} float/></div><p style={{color:B.purple,fontFamily:"'EB Garamond',serif",fontSize:20,lineHeight:1.6,fontStyle:"italic"}}>Your first lesson will be available soon.</p></div>)}
+      {tab==="bank"&&<div style={{padding:14}}>
+        <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.darkPurple,marginBottom:4}}>Previous Lessons</div>
+        <div style={{fontSize:9.5,color:B.purple,marginBottom:14}}>{released.length} released</div>
+        {released.length===0?<p style={{color:B.purple,fontSize:15,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No lessons released yet.</p>:released.map(l=>{const isDone=myResp.some(r=>r.lessonId===l.id);return(<div key={l.id} onClick={()=>setOpen(l)} style={{background:"white",borderRadius:12,padding:"13px 15px",marginBottom:9,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.07)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div style={{flex:1,minWidth:0,marginRight:10}}><div style={{fontFamily:"'EB Garamond',serif",fontSize:17,color:B.darkPurple,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.lessonNumber}. {l.title}</div><div style={{fontSize:10,color:B.sage,marginTop:3}}>{l.readingReleaseDate||""}{l.summaryReleased?" · Summary available":" · Reading only"}</div></div>
+            <span style={{background:isDone?"#ede9f2":"#f0ede8",borderRadius:9,padding:"3px 9px",fontSize:9,fontWeight:600,color:isDone?B.gold:"#b5adc0",whiteSpace:"nowrap"}}>{isDone?"Quiz Done ✓":"Quiz Pending"}</span>
+          </div>
+        </div>);})}
+      </div>}
+      {tab==="reflections"&&<div style={{padding:14}}>
+        <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.darkPurple,marginBottom:14}}>My Reflections</div>
+        <select value={reflL||""} onChange={e=>setReflL(Number(e.target.value)||null)} style={{width:"100%",padding:"11px 13px",borderRadius:11,border:`1.5px solid #C5BBCE`,fontSize:14,fontFamily:"'EB Garamond',serif",color:B.darkPurple,background:"white",marginBottom:14}}>
+          <option value="">Select a lesson…</option>
+          {myResp.map(r=>{const l=lessons.find(x=>x.id===r.lessonId);return<option key={r.lessonId} value={r.lessonId}>Lesson {r.lessonId}{l?` — ${l.title}`:""}</option>;})}
+        </select>
+        {reflL&&(()=>{
+          const r=myResp.find(x=>x.lessonId===reflL);if(!r)return<p style={{color:B.purple,fontSize:14,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No submission found.</p>;
+          const l=lessons.find(x=>x.id===reflL);const mcQs=l?.quiz?.mcQuestions||[];const rfPs=l?.quiz?.reflections||[];
+          const myFb=feedback.find(f=>f.lessonId===reflL&&f.studentName===studentName);
+          const[sqAll,setSqAll]=useState(false);const[srAll,setSrAll]=useState(false);
+          return(<div>
+            <div style={{background:`linear-gradient(135deg,${B.darkPurple},#7B6B8A)`,borderRadius:14,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <div><div style={{fontFamily:"'EB Garamond',serif",fontSize:26,fontWeight:500,color:"white",lineHeight:1}}>{r.score}/{mcQs.length}</div><div style={{fontSize:8.5,letterSpacing:2,textTransform:"uppercase",color:"rgba(255,255,255,0.5)",marginTop:3}}>Quiz Score</div></div>
+              <div style={{textAlign:"right"}}><div style={{fontSize:11,color:"rgba(255,255,255,0.65)",marginBottom:4}}><span style={{color:"#d4af37",fontWeight:600}}>{r.score} correct</span></div><div style={{fontSize:11,color:"rgba(255,255,255,0.65)"}}><span style={{color:"#f4a58a",fontWeight:600}}>{mcQs.length-r.score} incorrect</span></div><div style={{fontSize:9,color:"rgba(255,255,255,0.4)",marginTop:2}}>{fmtDate(r.submittedAt)}</div></div>
+            </div>
+            {myFb?.overall?.stamp&&<div style={{background:"white",borderRadius:11,padding:"12px 13px",marginBottom:12,borderLeft:`3px solid ${B.metalGold}`,boxShadow:"0 2px 8px rgba(91,73,105,0.07)"}}>
+              <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:7}}>From your teacher</div>
+              <StampShow stampId={myFb.overall.stamp}/>
+              {myFb.overall.note&&<div style={{fontFamily:"'EB Garamond',serif",fontSize:14,color:B.adminDark,lineHeight:1.7,marginBottom:6}}>{myFb.overall.note}</div>}
+              {myFb.overall.resourceTitle&&<div style={{background:"#f7f5f2",borderRadius:8,padding:"7px 9px",display:"flex",alignItems:"center",gap:6}}>
+                <IBook stroke={B.green} size={12}/><span style={{fontSize:11,color:B.darkPurple,flex:1}}>{myFb.overall.resourceTitle}</span>
+                {myFb.overall.resourceUrl&&<a href={myFb.overall.resourceUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:B.green,fontWeight:600,textDecoration:"none"}}>Open ↗</a>}
+              </div>}
+            </div>}
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:B.darkPurple,marginBottom:10}}>QUIZ</div>
+            {(sqAll?mcQs:mcQs.slice(0,1)).map((q,i)=>{const sel=r.mcAnswers?.[i]??null;return(<div key={i} style={{marginBottom:10}}>
+              <div style={{fontSize:11.5,color:B.darkPurple,fontWeight:500,marginBottom:6,lineHeight:1.4}}>{i+1}. {q.question}</div>
+              {q.options.map((opt,j)=>{const iC=j===q.correct,iS=j===sel;let bg="white",border=`1px solid ${B.sage}`;if(iC){bg="#f0faf0";border=`1px solid #A39C0F30`;}if(iS&&!iC){bg="#fff0f0";border=`1px solid #C0392B25`;}return(<div key={j} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",borderRadius:8,marginBottom:3,border,background:bg}}>
+                {iC?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A39C0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>:iS?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>:<div style={{width:10,height:10,borderRadius:"50%",border:"1.5px solid #C5BBCE",flexShrink:0}}/>}
+                <span style={{fontFamily:"'EB Garamond',serif",fontSize:12.5,fontWeight:iC?600:400,color:iS&&!iC?"#C0392B":iC?B.darkPurple:"#b5adc0"}}>{opt}</span>
+                {iS&&!iC&&<span style={{fontSize:8,color:"#C0392B",marginLeft:2}}>your answer</span>}
+              </div>);})}
+            </div>);})}
+            {mcQs.length>1&&<button onClick={()=>setSqAll(v=>!v)} style={{width:"100%",padding:"10px",borderRadius:10,background:"white",color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.08)",marginBottom:12}}>{sqAll?"Hide questions ↑":`Review all ${mcQs.length} questions ↓`}</button>}
+            <div style={{height:1,background:B.sage,opacity:0.25,margin:"14px 0"}}/>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:B.darkPurple,marginBottom:10}}>REFLECTIONS</div>
+            {(srAll?rfPs:rfPs.slice(0,1)).map((prompt,i)=>{const fb=myFb?.reflections?.[i];return(<div key={i} style={{marginBottom:12}}>
+              <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13.5,color:B.purple,lineHeight:1.55,marginBottom:6}}>{prompt}</div>
+              <div style={{fontFamily:"'EB Garamond',serif",fontSize:15,color:B.adminDark,lineHeight:1.7,padding:"10px 12px",background:"#F7F4F0",borderRadius:10,marginBottom:fb?.stamp?8:0}}>{r.reflections?.[i]||<em style={{color:B.sage}}>No response.</em>}</div>
+              {fb?.stamp&&<div style={{background:"white",borderRadius:10,padding:"10px 12px",borderLeft:`3px solid ${B.metalGold}`,marginTop:6}}>
+                <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:6}}>From your teacher</div>
+                <StampShow stampId={fb.stamp}/>
+                {fb.note&&<div style={{fontFamily:"'EB Garamond',serif",fontSize:13,color:B.adminDark,lineHeight:1.65,marginBottom:6}}>{fb.note}</div>}
+              </div>}
+            </div>);})}
+            {rfPs.length>1&&<button onClick={()=>setSrAll(v=>!v)} style={{width:"100%",padding:"10px",borderRadius:10,background:"white",color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.08)"}}>{srAll?"Hide Reflections ↑":"Show Remaining Reflections ↓"}</button>}
+          </div>);
+        })()}
+        {myResp.length===0&&!reflL&&<p style={{color:B.purple,fontSize:14,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No quiz submissions yet.</p>}
+      </div>}
+    </div>
+    <BottomNav tabs={navTabs} active={tab} onSelect={setTab}/>
+  </div>);
+};
+
+// ── WELCOME + PIN ──
+const WelcomeScreen=({settings,onEnter})=>{
+  const[step,setStep]=useState("name");
+  const[first,setFirst]=useState("");const[surname,setSurname]=useState("");
+  const[pin,setPin]=useState("");const[confirm,setConfirm]=useState("");
+  const[err,setErr]=useState("");const[loading,setLoading]=useState(false);
+  const full=`${first.trim()} ${surname.trim()}`.trim();const ready=first.trim()&&surname.trim();
+  const inp={width:"100%",padding:"13px 14px",borderRadius:10,border:`1px solid ${B.sage}`,fontSize:16,fontFamily:"'EB Garamond',serif",boxSizing:"border-box",background:"white",marginBottom:11,outline:"none"};
+  const handleName=async()=>{if(!ready)return;setLoading(true);
+    const existing=await rtGet(`settings/students/${full.replace(/\s+/g,"_")}`);
+    if(existing){setStep("returning");setLoading(false);return;}
+    const wl=settings.whitelist||[];const onList=wl.some(n=>n.toLowerCase()===full.toLowerCase());
+    if(!onList){setErr("Your name is not on the approved list. Please check with your teacher.");setLoading(false);return;}
+    if(settings.courseLocked){setErr("Registration is currently closed. Please contact your teacher.");setLoading(false);return;}
+    setErr("");setStep("pin");setLoading(false);};
+  const handlePin=async()=>{if(pin.length!==4||!/^\d{4}$/.test(pin)){setErr("Please enter a 4-digit PIN.");return;}if(pin!==confirm){setErr("PINs do not match.");return;}setLoading(true);await rtSet(`settings/students/${full.replace(/\s+/g,"_")}`,{name:full,pinHash:pin,registeredAt:new Date().toISOString()});setLoading(false);onEnter(full);};
+  const handleReturn=async()=>{setLoading(true);const ex=await rtGet(`settings/students/${full.replace(/\s+/g,"_")}`);if(ex&&ex.pinHash===pin){setLoading(false);onEnter(full);}else{setErr("Incorrect PIN.");setLoading(false);}};
+  return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
+    <div style={{width:"100%",maxWidth:390,background:"white",borderRadius:20,padding:30,boxShadow:"0 4px 22px rgba(91,73,105,0.11)",textAlign:"center"}}>
+      <div style={{display:"flex",justifyContent:"center",marginBottom:14}}><LotusImg size={56} float/></div>
+      <div style={{fontFamily:"'EB Garamond',serif",fontSize:18,fontWeight:600,color:B.darkPurple,marginBottom:12,lineHeight:1.2}}>Yoga Vana Forest Academy</div>
+      {step==="name"&&<>
+        <h2 style={{color:B.darkPurple,fontSize:24,margin:"0 0 8px",fontFamily:"'EB Garamond',serif",fontWeight:500,fontStyle:"italic"}}>namaste !</h2>
+        <div style={{width:36,height:1.5,background:`linear-gradient(to right,transparent,${B.gold},transparent)`,margin:"10px auto 18px"}}/>
+        <p style={{color:B.purple,fontSize:16,marginBottom:24,lineHeight:1.65,fontFamily:"'EB Garamond',serif"}}>Please enter your name so your teacher can recognise your work.</p>
+        <input value={first} onChange={e=>setFirst(e.target.value)} placeholder="First name…" style={inp}/>
+        <input value={surname} onChange={e=>setSurname(e.target.value)} placeholder="Surname…" onKeyDown={e=>e.key==="Enter"&&ready&&handleName()} style={{...inp,marginBottom:0}}/>
+        {err&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{err}</div>}
+        <button onClick={handleName} disabled={!ready||loading} style={{width:"100%",marginTop:18,padding:"14px",borderRadius:12,background:ready?B.darkPurple:"#c5bfa8",color:"white",border:"none",fontSize:14,fontFamily:"DM Sans,sans-serif",fontWeight:400,letterSpacing:"0.6px",cursor:ready?"pointer":"default"}}>{loading?"Checking…":"Continue"}</button>
+      </>}
+      {step==="pin"&&<>
+        <h2 style={{color:B.darkPurple,fontSize:22,margin:"0 0 8px",fontFamily:"'EB Garamond',serif",fontWeight:500}}>Create your PIN</h2>
+        <div style={{width:36,height:1.5,background:`linear-gradient(to right,transparent,${B.gold},transparent)`,margin:"10px auto 18px"}}/>
+        <p style={{color:B.purple,fontSize:15,marginBottom:24,lineHeight:1.65,fontFamily:"'EB Garamond',serif"}}>Choose a 4-digit PIN only you know. You will use it every time you log in.</p>
+        <input type="password" inputMode="numeric" maxLength={4} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} placeholder="4-digit PIN" style={{...inp,textAlign:"center",letterSpacing:8,fontSize:20}}/>
+        <input type="password" inputMode="numeric" maxLength={4} value={confirm} onChange={e=>setConfirm(e.target.value.replace(/\D/g,""))} placeholder="Confirm PIN" style={{...inp,textAlign:"center",letterSpacing:8,fontSize:20,marginBottom:0}}/>
+        {err&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{err}</div>}
+        <button onClick={handlePin} disabled={loading} style={{width:"100%",marginTop:18,padding:"14px",borderRadius:12,background:B.darkPurple,color:"white",border:"none",fontSize:14,fontFamily:"DM Sans,sans-serif",fontWeight:400,letterSpacing:"0.6px",cursor:"pointer"}}>{loading?"Setting up…":"Step Into Your Practice"}</button>
+      </>}
+      {step==="returning"&&<>
+        <h2 style={{color:B.darkPurple,fontSize:22,margin:"0 0 8px",fontFamily:"'EB Garamond',serif",fontWeight:500}}>Welcome back</h2>
+        <div style={{width:36,height:1.5,background:`linear-gradient(to right,transparent,${B.gold},transparent)`,margin:"10px auto 18px"}}/>
+        <p style={{color:B.purple,fontSize:15,marginBottom:6,lineHeight:1.65,fontFamily:"'EB Garamond',serif",fontStyle:"italic"}}>{full}</p>
+        <p style={{color:B.purple,fontSize:14,marginBottom:18,lineHeight:1.65,fontFamily:"'EB Garamond',serif"}}>Enter your PIN to continue.</p>
+        <input type="password" inputMode="numeric" maxLength={4} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,""))} onKeyDown={e=>e.key==="Enter"&&handleReturn()} placeholder="Your PIN" style={{...inp,textAlign:"center",letterSpacing:8,fontSize:20,marginBottom:0}}/>
+        {err&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{err}</div>}
+        <button onClick={handleReturn} disabled={loading} style={{width:"100%",marginTop:18,padding:"14px",borderRadius:12,background:B.darkPurple,color:"white",border:"none",fontSize:14,fontFamily:"DM Sans,sans-serif",fontWeight:400,letterSpacing:"0.6px",cursor:"pointer"}}>{loading?"Checking…":"Step Into Your Practice"}</button>
+        <button onClick={()=>{setStep("name");setFirst("");setSurname("");setPin("");setErr("");}} style={{width:"100%",marginTop:10,padding:"10px",borderRadius:12,background:"none",color:B.purple,border:`1px solid #C5BBCE`,fontSize:13,cursor:"pointer"}}>Not you? Go back</button>
+      </>}
+      <div style={{marginTop:26}}><CurvedLogo width={140} opacity={0.48}/></div>
+    </div>
+  </div>);
+};
+
+// ── LOGIN ──
+const LoginScreen=({onStudent,onAdmin})=>{
+  const[pw,setPw]=useState("");const[err,setErr]=useState("");
+  const[taps,setTaps]=useState(0);const[showAdmin,setShow]=useState(false);
+  const[aEmail,setAEmail]=useState("");const[aPw,setAPw]=useState("");const[aErr,setAErr]=useState("");
+  const timer=useRef(null);
+  const tap=()=>setTaps(c=>{const n=c+1;clearTimeout(timer.current);timer.current=setTimeout(()=>setTaps(0),1500);if(n>=7){setShow(true);return 0;}return n;});
+  const tryS=()=>pw===STUDENT_PASSWORD?(setErr(""),onStudent()):setErr("Incorrect password. Please try again.");
+  const tryA=()=>aEmail===ADMIN_EMAIL&&aPw===ADMIN_PASSWORD?(setAErr(""),onAdmin()):setAErr("Invalid credentials.");
+  return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column",overflowX:"hidden"}}>
+    <div style={{background:"linear-gradient(170deg,#3d2e4a 0%,#5B4969 55%,#7B6B8A 100%)",padding:"50px 26px 32px",textAlign:"center",position:"relative",overflow:"hidden"}}>
+      <div style={{position:"absolute",top:-80,left:-80,width:280,height:280,borderRadius:"50%",background:"rgba(255,255,255,0.03)",pointerEvents:"none"}}/>
+      <div style={{position:"absolute",bottom:-60,right:-60,width:220,height:220,borderRadius:"50%",background:"rgba(255,255,255,0.04)",pointerEvents:"none"}}/>
+      <div onClick={tap} style={{display:"flex",justifyContent:"center",marginBottom:20,cursor:"default",userSelect:"none"}}><LotusImg size={84} float/></div>
+      <div className="fade-up-d1" style={{fontSize:"9.5px",letterSpacing:"3.5px",textTransform:"uppercase",fontWeight:400,color:"rgba(255,255,255,0.42)",marginBottom:12}}>Welcome to</div>
+      <div className="fade-up-d1"><h1 style={{fontFamily:"'EB Garamond',serif",fontSize:33,fontWeight:500,color:"white",lineHeight:1.15,margin:"0 0 6px"}}>Yoga Vana<br/>Forest Academy</h1></div>
+      <div className="fade-up-d2" style={{display:"flex",justifyContent:"center",margin:"13px 0"}}><div style={{width:44,height:"1.5px",background:`linear-gradient(to right,transparent,${B.gold},transparent)`}}/></div>
+      <div className="fade-up-d2">
+        <p style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:15,color:"rgba(255,255,255,0.62)",lineHeight:1.65,maxWidth:290,margin:"0 auto 6px"}}><span style={{fontStyle:"normal",fontWeight:600}}>BYC</span> – 200 Hour Yoga Teacher Training</p>
+        <div style={{fontSize:"8.5px",letterSpacing:"2.5px",textTransform:"uppercase",color:"rgba(255,255,255,0.35)",marginBottom:18,fontWeight:400}}>Yoga Philosophy</div>
+      </div>
+      <div className="fade-up-d3" style={{display:"flex",justifyContent:"center",borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:16}}>
+        {[{I:IBook,l:"Read"},{I:IHeart,l:"Reflect"},{I:({stroke,size})=><svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="3.5" r="1.5"/><path d="M8 9c0 0 1.5-1.5 4-1.5s4 1.5 4 1.5"/><path d="M5 12c2 0 3.5 1 7 1s5-1 7-1"/><path d="M7 12l-1.5 5h13L17 12"/></svg>,l:"Apply"}].map((item,i,arr)=>(
+          <div key={item.l} style={{flex:1,textAlign:"center",padding:"6px 4px",borderRight:i<arr.length-1?"1px solid rgba(255,255,255,0.12)":"none"}}>
+            <div style={{display:"flex",justifyContent:"center",marginBottom:5}}><item.I stroke="rgba(255,255,255,0.7)" size={17}/></div>
+            <div style={{fontSize:"8px",letterSpacing:"2px",textTransform:"uppercase",fontWeight:500,color:"rgba(255,255,255,0.45)"}}>{item.l}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+    <div style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",padding:"28px 22px 32px"}}>
+      <div style={{width:"100%",maxWidth:380}} className="fade-up-d4">
+        <div style={{background:"white",borderRadius:20,padding:"26px 22px",boxShadow:"0 8px 32px rgba(91,73,105,0.10)"}}>
+          <div style={{fontSize:"10px",letterSpacing:"3px",textTransform:"uppercase",color:B.purple,fontWeight:500,marginBottom:18,textAlign:"center"}}>Student Access</div>
+          <input type="password" value={pw} placeholder="Enter your password" onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryS()} className="pw-input"/>
+          {err&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{err}</div>}
+          <button onClick={tryS} className="btn-primary" style={{marginTop:16}}>Step Into Your Practice</button>
+        </div>
+        {showAdmin&&<div style={{marginTop:14,background:"white",borderRadius:18,padding:"20px 22px",border:`1px solid rgba(138,112,153,0.2)`,boxShadow:"0 4px 16px rgba(91,73,105,0.08)"}}>
+          <div style={{fontSize:"9.5px",color:B.sage,marginBottom:14,textAlign:"center",letterSpacing:"3px",textTransform:"uppercase"}}>Administration</div>
+          <input type="email" value={aEmail} placeholder="Admin email" onChange={e=>setAEmail(e.target.value)} className="pw-input" style={{marginBottom:10}}/>
+          <input type="password" value={aPw} placeholder="Admin password" onChange={e=>setAPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryA()} className="pw-input"/>
+          {aErr&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{aErr}</div>}
+          <button onClick={tryA} style={{width:"100%",marginTop:14,padding:"13px",borderRadius:12,background:B.adminDark,color:"white",border:"none",fontSize:13,fontWeight:400,cursor:"pointer",letterSpacing:"0.5px"}}>Sign In</button>
+        </div>}
+        <div style={{marginTop:24,textAlign:"center"}}><CurvedLogo width={150} opacity={0.5}/></div>
+      </div>
+    </div>
+  </div>);
+};
+
+// ── ROOT ──
+function App(){
+  const[role,setRole]=useState(null);const[student,setStudent]=useState(null);
+  const[lessons,setLessons]=useState(null);const[responses,setResponses]=useState([]);
+  const[feedback,setFeedback]=useState([]);const[settings,setSettings]=useState(null);
+  const[loading,setLoading]=useState(true);const[error,setError]=useState(null);
+  const loadAll=useCallback(async()=>{setLoading(true);setError(null);try{const[ls,rs,fb,st]=await Promise.all([loadLessons(),loadResponses(),loadFeedback(),loadSettings()]);setLessons(ls);setResponses(rs);setFeedback(fb);setSettings(st);}catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);};},[]);
+  useEffect(()=>{loadAll();},[]);
+  const onSaveLesson=useCallback(async upd=>{const ok=await saveLesson(upd);if(ok)setLessons(prev=>prev.map(l=>l.id===upd.id?upd:l));return ok;},[]);
+  const onSubmitQuiz=useCallback(async entry=>{await saveResponse(entry);setResponses(prev=>[...prev.filter(r=>!(r.lessonId===entry.lessonId&&r.studentName===entry.studentName)),entry]);},[]);
+  const onSaveSettings=useCallback(async s=>{await saveSettings(s);setSettings(s);},[]);
+  if(loading)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}><LotusImg size={60} float/><span style={{color:B.purple,fontSize:14,letterSpacing:1}}>Connecting…</span></div>);
+  if(error)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:24}}><LotusImg size={60}/><p style={{color:B.red,fontSize:14,textAlign:"center",maxWidth:300}}>{error}</p><button onClick={loadAll} style={{padding:"10px 24px",borderRadius:10,background:B.green,color:"white",border:"none",fontSize:14,cursor:"pointer"}}>Retry</button></div>);
+  return(<>
+    {!role&&<LoginScreen onStudent={()=>setRole("welcome")} onAdmin={()=>setRole("admin")}/>}
+    {role==="welcome"&&settings&&<WelcomeScreen settings={settings} onEnter={n=>{setStudent(n);setRole("student");}}/>}
+    {role==="student"&&<StudentDashboard studentName={student} lessons={lessons} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz}/>}
+    {role==="admin"&&<AdminDashboard lessons={lessons} responses={responses} feedback={feedback} settings={settings} onSaveLesson={onSaveLesson} onSaveSettings={onSaveSettings} onRefresh={loadAll}/>}
+  </>);
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
