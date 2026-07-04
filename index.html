@@ -42,11 +42,14 @@ body{background:#E2DCD0;-webkit-font-smoothing:antialiased;font-family:'DM Sans'
 <script type="text/babel" data-presets="react">
 const {useState,useEffect,useRef,useCallback}=React;
 const ADMIN_EMAIL="yogaupadesha@gmail.com";
-const ADMIN_PASSWORD="BYCadmin2026";
 const STUDENT_PASSWORD="yoga2026";
 const APP_NAME="Yoga Vana Forest Academy";
 const COURSE_NAME="BYC – 200 Hour Yoga Teacher Training";
 const RTDB_URL="https://yoga-vana-ttc-default-rtdb.firebaseio.com";
+const FIREBASE_API_KEY="AIzaSyB2HM86vv0GKh4my78I_FH40xPJfsOsQvU";
+const IDENTITY_URL="https://identitytoolkit.googleapis.com/v1";
+const REFRESH_URL="https://securetoken.googleapis.com/v1/token";
+const EMAIL_DOMAIN="yogavana.app";
 const B={green:"#A39C0F",purple:"#8A7099",darkPurple:"#5B4969",adminDark:"#2C1F3A",linen:"#E2DCD0",sage:"#7B8B6F",gold:"#E0B515",metalGold:"#d4af37",red:"#C0392B"};
 const LOTUS_URL="https://res.cloudinary.com/dudunfdov/image/upload/v1781093940/background-removed-background-removed-2_wz5nxf.png";
 const CURVED_LOGO="https://res.cloudinary.com/dudunfdov/image/upload/v1781539507/background-removed-background-removed-2_copy_ctn2lr.png";
@@ -55,6 +58,37 @@ const CURVED_LOGO="https://res.cloudinary.com/dudunfdov/image/upload/v1781539507
 const LotusImg=({size=40,float=false,dark=false})=>(<img src={LOTUS_URL} alt="lotus" className={float?"lotus-float":""} style={{width:size,height:size,objectFit:"contain",display:"block",flexShrink:0,filter:dark?"brightness(10) saturate(0.8)":"brightness(1.8) saturate(0.55)"}}/>);
 const CurvedLogo=({width=150,opacity=0.5})=>(<img src={CURVED_LOGO} alt="Yoga Vana India" style={{width,maxWidth:"65vw",display:"block",margin:"0 auto",opacity}}/>);
 
+// ── AUTH / IDENTITY ──
+// Students never see "email" — this just gives Firebase Auth a stable identity
+// derived from their name, so security rules can tell students apart without
+// requiring a real inbox. Admin uses one real Firebase Auth account.
+const keyOf=name=>name.trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
+const pseudoEmail=key=>`${key}@${EMAIL_DOMAIN}`;
+const derivePassword=pin=>`yv-${pin}-9k2qz`; // Firebase requires 6+ chars; PIN alone is 4
+
+let session={idToken:null,refreshToken:null,expiresAt:0,uid:null,email:null};
+const setSession=d=>{session={idToken:d.idToken,refreshToken:d.refreshToken,expiresAt:Date.now()+Number(d.expiresIn)*1000-60000,uid:d.localId,email:d.email};};
+const clearSession=()=>{session={idToken:null,refreshToken:null,expiresAt:0,uid:null,email:null};};
+const authRequest=async(path,body)=>{
+  const r=await fetch(`${IDENTITY_URL}/accounts:${path}?key=${FIREBASE_API_KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d?.error?.message||"AUTH_ERROR");
+  return d;
+};
+const authSignUp=(email,password)=>authRequest("signUp",{email,password,returnSecureToken:true});
+const authSignIn=(email,password)=>authRequest("signInWithPassword",{email,password,returnSecureToken:true});
+const authRefresh=async()=>{
+  if(!session.refreshToken)return null;
+  try{
+    const r=await fetch(`${REFRESH_URL}?key=${FIREBASE_API_KEY}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=refresh_token&refresh_token=${session.refreshToken}`});
+    const d=await r.json();
+    if(!r.ok)return null;
+    session={...session,idToken:d.id_token,refreshToken:d.refresh_token,expiresAt:Date.now()+Number(d.expires_in)*1000-60000};
+    return session.idToken;
+  }catch{return null;}
+};
+const getToken=async()=>{if(session.idToken&&Date.now()<session.expiresAt)return session.idToken;return await authRefresh();};
+
 const pad=n=>String(n).padStart(2,"0");
 const fmtDate=iso=>{if(!iso)return"";const d=new Date(iso);return`${pad(d.getDate())} / ${pad(d.getMonth()+1)} / ${d.getFullYear()}`;};
 const fmtDT=iso=>{if(!iso)return"";const d=new Date(iso);return`${fmtDate(iso)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;};
@@ -62,11 +96,18 @@ const todayISO=()=>new Date().toISOString().split("T")[0];
 const mkLesson=n=>({id:n,lessonNumber:n,title:`Lesson ${n}`,reading:"",summary:"",quiz:{mcQuestions:[],reflections:[]},resources:[],readingReleased:false,readingScheduledDate:null,readingReleaseDate:null,summaryReleased:false,summaryScheduledDate:null,summaryReleaseDate:null,quizReleased:false,quizScheduledDate:null,quizReleaseDate:null,resourcesReleased:false,readingMins:5});
 const lessonStatus=l=>{if(l.readingReleased&&l.summaryReleased&&l.quizReleased)return"Released";if(l.readingReleased)return"Reading Live";if(l.readingScheduledDate||l.summaryScheduledDate)return"Scheduled";return"Draft";};
 
-const rtGet=async p=>{try{const r=await fetch(`${RTDB_URL}/${p}.json`);if(!r.ok)return null;return await r.json();}catch{return null;}};
-const rtSet=async(p,d)=>{try{const r=await fetch(`${RTDB_URL}/${p}.json`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});return r.ok;}catch{return false;}};
-const rtGetAll=async p=>{try{const r=await fetch(`${RTDB_URL}/${p}.json`);if(!r.ok)return[];const d=await r.json();return d?Object.values(d):[];}catch{return[];}};
+const rtUrl=async p=>{const t=await getToken();return `${RTDB_URL}/${p}.json${t?`?auth=${t}`:""}`;};
+const rtGet=async p=>{try{const r=await fetch(await rtUrl(p));if(!r.ok)return null;return await r.json();}catch{return null;}};
+const rtSet=async(p,d)=>{try{const r=await fetch(await rtUrl(p),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});return r.ok;}catch{return false;}};
+const rtGetAll=async p=>{try{const r=await fetch(await rtUrl(p));if(!r.ok)return[];const d=await r.json();return d?Object.values(d):[];}catch{return[];}};
+const rtDel=async p=>{try{const r=await fetch(await rtUrl(p),{method:"DELETE"});return r.ok;}catch{return false;}};
+// Note: rtGet/rtSet above already omit the auth param when there's no session yet,
+// so they work fine for the public settings nodes (whitelist/courseLocked/registeredNames)
+// before a student or admin has signed in.
 
-const loadLessons=async()=>{
+// canWrite=true only for admin: students can read lessons but the "auto release by
+// scheduled date" write-back is an admin-only action under the new rules anyway.
+const loadLessons=async(canWrite=false)=>{
   const results=await Promise.all(Array.from({length:20},(_,i)=>rtGet(`lessons/${i+1}`)));
   let lessons=results.map((l,i)=>l||mkLesson(i+1));
   const today=todayISO();let changed=false;
@@ -75,16 +116,41 @@ const loadLessons=async()=>{
     if(!u.summaryReleased&&u.summaryScheduledDate&&u.summaryScheduledDate<=today){u={...u,summaryReleased:true,summaryReleaseDate:fmtDate(u.summaryScheduledDate+"T00:00:00")};changed=true;}
     if(!u.quizReleased&&u.quizScheduledDate&&u.quizScheduledDate<=today){u={...u,quizReleased:true,quizReleaseDate:fmtDate(u.quizScheduledDate+"T00:00:00")};changed=true;}
     return u;});
-  if(changed)await Promise.all(lessons.map(l=>rtSet(`lessons/${l.id}`,l)));
+  if(changed&&canWrite)await Promise.all(lessons.map(l=>rtSet(`lessons/${l.id}`,l)));
   return lessons;
 };
 const saveLesson=l=>rtSet(`lessons/${l.id}`,l);
-const loadResponses=()=>rtGetAll("quizResponses");
-const saveResponse=e=>rtSet(`quizResponses/${e.lessonId}_${e.studentName.replace(/\s+/g,"_")}`,e);
-const loadSettings=async()=>{const s=await rtGet("settings");return s||{courseLocked:false,whitelist:[],students:{}};};
-const saveSettings=s=>rtSet("settings",s);
-const saveFeedback=(lessonId,studentKey,fb)=>rtSet(`feedback/${lessonId}_${studentKey}`,fb);
-const loadFeedback=()=>rtGetAll("feedback");
+
+// quizResponses and feedback are now keyed by Firebase Auth uid so security rules
+// can restrict each student to their own data. studentName/lessonId are still
+// stored inside each record for display, so existing UI code needs no changes.
+const saveResponse=(uid,e)=>rtSet(`quizResponses/${uid}/${e.lessonId}`,{...e,uid});
+const loadMyResponses=async uid=>{const d=await rtGet(`quizResponses/${uid}`);return d?Object.values(d):[];};
+const loadAllResponses=async registeredMap=>{
+  const uids=Object.values(registeredMap||{});
+  const chunks=await Promise.all(uids.map(uid=>rtGet(`quizResponses/${uid}`)));
+  return chunks.flatMap(c=>c?Object.values(c):[]);
+};
+const saveFeedback=(uid,lessonId,fb)=>rtSet(`feedback/${uid}/${lessonId}`,fb);
+const loadMyFeedback=async uid=>{const d=await rtGet(`feedback/${uid}`);return d?Object.values(d):[];};
+const loadAllFeedback=async registeredMap=>{
+  const uids=Object.values(registeredMap||{});
+  const chunks=await Promise.all(uids.map(uid=>rtGet(`feedback/${uid}`)));
+  return chunks.flatMap(c=>c?Object.values(c):[]);
+};
+
+// Public settings (readable pre-login so the welcome screen can check the whitelist).
+// "registeredNames" maps a student's name-key -> their Firebase Auth uid, and replaces
+// the old plaintext-PIN "settings/students" node entirely.
+const loadPublicSettings=async()=>{
+  const[whitelist,courseLocked,registeredNames]=await Promise.all([rtGet("settings/whitelist"),rtGet("settings/courseLocked"),rtGet("settings/registeredNames")]);
+  return{whitelist:whitelist||[],courseLocked:!!courseLocked,registeredNames:registeredNames||{}};
+};
+const saveWhitelistAndLock=async s=>{await Promise.all([rtSet("settings/whitelist",s.whitelist||[]),rtSet("settings/courseLocked",!!s.courseLocked)]);return true;};
+const registerName=(key,uid)=>rtSet(`settings/registeredNames/${key}`,uid);
+// Legacy (pre-migration) plaintext-PIN store — admin-only, used once by the migration tool.
+const loadLegacyStudents=()=>rtGet("settings/students");
+const deleteLegacyStudents=()=>rtDel("settings/students");
 
 // ── UI ATOMS ──
 const Toast=({msg,onDone})=>{useEffect(()=>{const t=setTimeout(onDone,2600);return()=>clearTimeout(t);},[]);return<div style={{position:"fixed",bottom:86,left:"50%",transform:"translateX(-50%)",background:B.adminDark,color:"white",padding:"10px 22px",borderRadius:24,fontSize:13,zIndex:9999,whiteSpace:"nowrap",boxShadow:"0 4px 16px rgba(44,31,58,0.35)"}}>{msg}</div>;};
@@ -267,8 +333,59 @@ const LessonEdit=({lesson,onSave,onBack})=>{
   </div>);
 };
 
+// ── ONE-TIME SECURITY MIGRATION ──
+// Moves students created under the old plaintext-PIN system onto real Firebase Auth
+// accounts, and moves their quizResponses/feedback from the old name-based keys to
+// the new uid-based paths. Must be run by admin BEFORE the locked-down rules are
+// pasted into the Firebase console (it needs the old permissive rules to still be
+// active, since it reads/writes across every student's data).
+const runMigration=async(legacyStudents,onProgress)=>{
+  const entries=Object.entries(legacyStudents||{});
+  const results=[];
+  for(const[oldKey,rec] of entries){
+    const name=rec.name||oldKey.replace(/_/g," ");
+    const k=keyOf(name);const pin=rec.pinHash;
+    let uid=null;
+    try{
+      const d=await authSignUp(pseudoEmail(k),derivePassword(pin));
+      uid=d.localId;
+    }catch(e){
+      if(String(e.message).includes("EMAIL_EXISTS")){
+        try{const d2=await authSignIn(pseudoEmail(k),derivePassword(pin));uid=d2.localId;}
+        catch(e2){results.push({name,ok:false,error:"Account exists under a different PIN — needs manual fix"});onProgress&&onProgress(results.length,entries.length,name);continue;}
+      }else{results.push({name,ok:false,error:e.message});onProgress&&onProgress(results.length,entries.length,name);continue;}
+    }
+    await registerName(k,uid);
+    await Promise.all(Array.from({length:20},async(_,i)=>{
+      const lessonId=i+1;
+      const oldResp=await rtGet(`quizResponses/${lessonId}_${oldKey}`);
+      if(oldResp){await rtSet(`quizResponses/${uid}/${lessonId}`,{...oldResp,uid});await rtDel(`quizResponses/${lessonId}_${oldKey}`);}
+      const oldFb=await rtGet(`feedback/${lessonId}_${oldKey}`);
+      if(oldFb){await rtSet(`feedback/${uid}/${lessonId}`,{...oldFb,uid});await rtDel(`feedback/${lessonId}_${oldKey}`);}
+    }));
+    results.push({name,ok:true});
+    onProgress&&onProgress(results.length,entries.length,name);
+  }
+  if(results.every(r=>r.ok))await deleteLegacyStudents();
+  return results;
+};
+
+const MigrationPanel=({legacyStudents,onDone})=>{
+  const[running,setRunning]=useState(false);const[log,setLog]=useState([]);const[done,setDone]=useState(false);
+  const count=Object.keys(legacyStudents||{}).length;
+  if(count===0)return null;
+  const run=async()=>{setRunning(true);setLog([]);const results=await runMigration(legacyStudents,(i,total,name)=>setLog(p=>[...p,`${i}/${total} — ${name}`]));setRunning(false);setDone(true);onDone&&onDone(results);};
+  return(<div style={{background:"#fff8e6",border:`1.5px solid ${B.gold}`,borderRadius:12,padding:"14px 15px",marginBottom:14}}>
+    <div style={{fontWeight:700,fontSize:13,color:"#8a6800",marginBottom:6}}>⚠ One-Time Security Migration</div>
+    <div style={{fontSize:12,color:B.adminDark,lineHeight:1.6,marginBottom:10}}>Found {count} student{count!==1?"s":""} still on the old login system. Run this once — and only while the Firebase rules are still the old (open) ones, before you paste in the new locked-down rules.</div>
+    {!done&&<button onClick={run} disabled={running} style={{width:"100%",padding:"11px",borderRadius:9,background:running?"#888":B.red,color:"white",border:"none",fontSize:13,fontWeight:600,cursor:running?"wait":"pointer"}}>{running?"Migrating…":`Migrate ${count} student${count!==1?"s":""}`}</button>}
+    {log.length>0&&<div style={{marginTop:10,maxHeight:140,overflow:"auto",fontSize:11,color:B.purple,fontFamily:"monospace"}}>{log.map((l,i)=><div key={i}>{l}</div>)}</div>}
+    {done&&<div style={{marginTop:8,fontSize:12,color:B.green,fontWeight:600}}>Migration complete. You can now paste the new rules into Firebase.</div>}
+  </div>);
+};
+
 // ── ADMIN SETTINGS ──
-const AdminSettings=({settings,onSave})=>{
+const AdminSettings=({settings,onSave,legacyStudents,onMigrated})=>{
   const[s,setS]=useState({...settings,whitelist:[...(settings.whitelist||[])]});
   const[newFirst,setNewFirst]=useState("");const[newSurname,setNewSurname]=useState("");
   const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
@@ -283,6 +400,7 @@ const AdminSettings=({settings,onSave})=>{
   return(<div style={{padding:14,paddingBottom:80}}>
     {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
     <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:14}}>Course Settings</div>
+    <MigrationPanel legacyStudents={legacyStudents} onDone={onMigrated}/>
     <div style={{background:"white",borderRadius:12,padding:"14px 15px",marginBottom:14,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
         <div><div style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Course Registration</div>
@@ -350,7 +468,7 @@ const FeedbackWriter=({lesson,response,existingFb,onBack})=>{
   const[rFb,setRFb]=useState(existingFb?.reflections||{});
   const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
   const rfPs=lesson?.quiz?.reflections||[];
-  const doSave=async()=>{setSaving(true);const key=response.studentName.replace(/\s+/g,"_");const ok=await saveFeedback(response.lessonId,key,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,savedAt:new Date().toISOString()});setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
+  const doSave=async()=>{setSaving(true);const ok=await saveFeedback(response.uid,response.lessonId,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,uid:response.uid,savedAt:new Date().toISOString()});setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
   const ta={width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.sage}`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",resize:"none",minHeight:60,lineHeight:1.6,marginBottom:8,boxSizing:"border-box"};
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
     {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
@@ -447,7 +565,7 @@ const ProgressTab=({lessons,responses,settings})=>{
 };
 
 // ── ADMIN DASHBOARD ──
-const AdminDashboard=({lessons,responses,feedback,settings,onSaveLesson,onSaveSettings,onRefresh})=>{
+const AdminDashboard=({lessons,responses,feedback,settings,legacyStudents,onSaveLesson,onSaveSettings,onRefresh,onMigrated})=>{
   const[tab,setTab]=useState("lessons");const[editing,setEditing]=useState(null);const[openResp,setOpenResp]=useState(null);
   if(editing){const cur=lessons.find(l=>l.id===editing.id)||editing;return<LessonEdit lesson={cur} onSave={async upd=>{const ok=await onSaveLesson(upd);setEditing(upd);return ok;}} onBack={()=>{setEditing(null);onRefresh();}}/>;}
   if(openResp){const l=lessons.find(x=>x.id===openResp.lessonId);const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);return<FeedbackWriter lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}}/>;}
@@ -478,7 +596,7 @@ const AdminDashboard=({lessons,responses,feedback,settings,onSaveLesson,onSaveSe
       </div>}
       {tab==="responses"&&<ResponsesTab lessons={lessons} responses={responses} feedback={feedback} onOpen={r=>setOpenResp(r)}/>}
       {tab==="progress"&&<ProgressTab lessons={lessons} responses={responses} settings={settings}/>}
-      {tab==="settings"&&<AdminSettings settings={settings} onSave={async s=>{await onSaveSettings(s);setTab("lessons");}}/>}
+      {tab==="settings"&&<AdminSettings settings={settings} legacyStudents={legacyStudents} onMigrated={onMigrated} onSave={async s=>{await onSaveSettings(s);setTab("lessons");}}/>}
     </div>
     {tab!=="settings"&&<BottomNav tabs={adminTabs} active={tab} onSelect={setTab} bg={B.adminDark} ac={B.gold}/>}
   </div>);
@@ -662,16 +780,39 @@ const WelcomeScreen=({settings,onEnter})=>{
   const[pin,setPin]=useState("");const[confirm,setConfirm]=useState("");
   const[err,setErr]=useState("");const[loading,setLoading]=useState(false);
   const full=`${first.trim()} ${surname.trim()}`.trim();const ready=first.trim()&&surname.trim();
+  const key=keyOf(full);
   const inp={width:"100%",padding:"13px 14px",borderRadius:10,border:`1px solid ${B.sage}`,fontSize:16,fontFamily:"'EB Garamond',serif",boxSizing:"border-box",background:"white",marginBottom:11,outline:"none"};
   const handleName=async()=>{if(!ready)return;setLoading(true);
-    const existing=await rtGet(`settings/students/${full.replace(/\s+/g,"_")}`);
-    if(existing){setStep("returning");setLoading(false);return;}
+    const alreadyRegistered=!!(settings.registeredNames||{})[key];
+    if(alreadyRegistered){setStep("returning");setLoading(false);return;}
     const wl=settings.whitelist||[];const onList=wl.some(n=>n.toLowerCase()===full.toLowerCase());
     if(!onList){setErr("Your name is not on the approved list. Please check with your teacher.");setLoading(false);return;}
     if(settings.courseLocked){setErr("Registration is currently closed. Please contact your teacher.");setLoading(false);return;}
     setErr("");setStep("pin");setLoading(false);};
-  const handlePin=async()=>{if(pin.length!==4||!/^\d{4}$/.test(pin)){setErr("Please enter a 4-digit PIN.");return;}if(pin!==confirm){setErr("PINs do not match.");return;}setLoading(true);await rtSet(`settings/students/${full.replace(/\s+/g,"_")}`,{name:full,pinHash:pin,registeredAt:new Date().toISOString()});setLoading(false);onEnter(full);};
-  const handleReturn=async()=>{setLoading(true);const ex=await rtGet(`settings/students/${full.replace(/\s+/g,"_")}`);if(ex&&ex.pinHash===pin){setLoading(false);onEnter(full);}else{setErr("Incorrect PIN.");setLoading(false);}};
+  const handlePin=async()=>{
+    if(pin.length!==4||!/^\d{4}$/.test(pin)){setErr("Please enter a 4-digit PIN.");return;}
+    if(pin!==confirm){setErr("PINs do not match.");return;}
+    setLoading(true);setErr("");
+    try{
+      const d=await authSignUp(pseudoEmail(key),derivePassword(pin));
+      setSession(d);
+      await registerName(key,d.localId);
+      setLoading(false);onEnter(full);
+    }catch(e){
+      setLoading(false);
+      if(String(e.message).includes("EMAIL_EXISTS")){setErr("This name is already registered. Please go back and use 'Not you?' to sign in instead.");}
+      else{setErr("Could not set up your account. Please check your connection and try again.");}
+    }};
+  const handleReturn=async()=>{
+    setLoading(true);setErr("");
+    try{
+      const d=await authSignIn(pseudoEmail(key),derivePassword(pin));
+      setSession(d);
+      setLoading(false);onEnter(full);
+    }catch(e){
+      setLoading(false);
+      setErr("Incorrect PIN.");
+    }};
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
     <div style={{width:"100%",maxWidth:390,background:"white",borderRadius:20,padding:30,boxShadow:"0 4px 22px rgba(91,73,105,0.11)",textAlign:"center"}}>
       <div style={{display:"flex",justifyContent:"center",marginBottom:14}}><LotusImg size={56} float/></div>
@@ -713,11 +854,18 @@ const WelcomeScreen=({settings,onEnter})=>{
 const LoginScreen=({onStudent,onAdmin})=>{
   const[pw,setPw]=useState("");const[err,setErr]=useState("");
   const[taps,setTaps]=useState(0);const[showAdmin,setShow]=useState(false);
-  const[aEmail,setAEmail]=useState("");const[aPw,setAPw]=useState("");const[aErr,setAErr]=useState("");
+  const[aEmail,setAEmail]=useState("");const[aPw,setAPw]=useState("");const[aErr,setAErr]=useState("");const[aLoading,setALoading]=useState(false);
   const timer=useRef(null);
   const tap=()=>setTaps(c=>{const n=c+1;clearTimeout(timer.current);timer.current=setTimeout(()=>setTaps(0),1500);if(n>=7){setShow(true);return 0;}return n;});
   const tryS=()=>pw===STUDENT_PASSWORD?(setErr(""),onStudent()):setErr("Incorrect password. Please try again.");
-  const tryA=()=>aEmail===ADMIN_EMAIL&&aPw===ADMIN_PASSWORD?(setAErr(""),onAdmin()):setAErr("Invalid credentials.");
+  const tryA=async()=>{
+    setALoading(true);setAErr("");
+    try{
+      const d=await authSignIn(aEmail.trim(),aPw);
+      if((d.email||"").toLowerCase()!==ADMIN_EMAIL.toLowerCase()){setAErr("This account is not authorised as admin.");setALoading(false);return;}
+      setSession(d);setALoading(false);onAdmin();
+    }catch(e){setALoading(false);setAErr("Invalid credentials.");}
+  };
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column",overflowX:"hidden"}}>
     <div style={{background:"linear-gradient(170deg,#3d2e4a 0%,#5B4969 55%,#7B6B8A 100%)",padding:"50px 26px 32px",textAlign:"center",position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",top:-80,left:-80,width:280,height:280,borderRadius:"50%",background:"rgba(255,255,255,0.03)",pointerEvents:"none"}}/>
@@ -752,7 +900,7 @@ const LoginScreen=({onStudent,onAdmin})=>{
           <input type="email" value={aEmail} placeholder="Admin email" onChange={e=>setAEmail(e.target.value)} className="pw-input" style={{marginBottom:10}}/>
           <input type="password" value={aPw} placeholder="Admin password" onChange={e=>setAPw(e.target.value)} onKeyDown={e=>e.key==="Enter"&&tryA()} className="pw-input"/>
           {aErr&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{aErr}</div>}
-          <button onClick={tryA} style={{width:"100%",marginTop:14,padding:"13px",borderRadius:12,background:B.adminDark,color:"white",border:"none",fontSize:13,fontWeight:400,cursor:"pointer",letterSpacing:"0.5px"}}>Sign In</button>
+          <button onClick={tryA} disabled={aLoading} style={{width:"100%",marginTop:14,padding:"13px",borderRadius:12,background:B.adminDark,color:"white",border:"none",fontSize:13,fontWeight:400,cursor:"pointer",letterSpacing:"0.5px"}}>{aLoading?"Signing in…":"Sign In"}</button>
         </div>}
         <div style={{marginTop:24,textAlign:"center"}}><CurvedLogo width={150} opacity={0.5}/></div>
       </div>
@@ -762,22 +910,43 @@ const LoginScreen=({onStudent,onAdmin})=>{
 
 // ── ROOT ──
 function App(){
-  const[role,setRole]=useState(null);const[student,setStudent]=useState(null);
+  const[role,setRole]=useState(null);const[student,setStudent]=useState(null);const[uid,setUid]=useState(null);
   const[lessons,setLessons]=useState(null);const[responses,setResponses]=useState([]);
   const[feedback,setFeedback]=useState([]);const[settings,setSettings]=useState(null);
+  const[legacyStudents,setLegacyStudents]=useState(null);
   const[loading,setLoading]=useState(true);const[error,setError]=useState(null);
-  const loadAll=useCallback(async()=>{setLoading(true);setError(null);try{const[ls,rs,fb,st]=await Promise.all([loadLessons(),loadResponses(),loadFeedback(),loadSettings()]);setLessons(ls);setResponses(rs);setFeedback(fb);setSettings(st);}catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);};},[]);
-  useEffect(()=>{loadAll();},[]);
+
+  // Public settings only — safe to load before anyone signs in (needed for the welcome screen).
+  const loadPublic=useCallback(async()=>{setLoading(true);setError(null);try{setSettings(await loadPublicSettings());}catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);}},[]);
+  useEffect(()=>{loadPublic();},[]);
+
+  // Runs once a student is signed in — only ever fetches THEIR OWN data.
+  const loadStudentData=useCallback(async theUid=>{setLoading(true);setError(null);try{const[ls,rs,fb]=await Promise.all([loadLessons(false),loadMyResponses(theUid),loadMyFeedback(theUid)]);setLessons(ls);setResponses(rs);setFeedback(fb);}catch(e){setError("Could not load your lessons. Please check your connection.");}finally{setLoading(false);}},[]);
+
+  // Runs once admin is signed in — fetches everything, including the (soon to be deleted) legacy PIN store.
+  const loadAdminData=useCallback(async()=>{setLoading(true);setError(null);try{
+    const pub=await loadPublicSettings();setSettings(pub);
+    const[ls,legacy]=await Promise.all([loadLessons(true),loadLegacyStudents()]);
+    setLessons(ls);setLegacyStudents(legacy);
+    const[rs,fb]=await Promise.all([loadAllResponses(pub.registeredNames),loadAllFeedback(pub.registeredNames)]);
+    setResponses(rs);setFeedback(fb);
+  }catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);}},[]);
+
   const onSaveLesson=useCallback(async upd=>{const ok=await saveLesson(upd);if(ok)setLessons(prev=>prev.map(l=>l.id===upd.id?upd:l));return ok;},[]);
-  const onSubmitQuiz=useCallback(async entry=>{await saveResponse(entry);setResponses(prev=>[...prev.filter(r=>!(r.lessonId===entry.lessonId&&r.studentName===entry.studentName)),entry]);},[]);
-  const onSaveSettings=useCallback(async s=>{await saveSettings(s);setSettings(s);},[]);
+  const onSubmitQuiz=useCallback(async entry=>{const full={...entry,uid};const ok=await saveResponse(uid,full);if(ok)setResponses(prev=>[...prev.filter(r=>r.lessonId!==entry.lessonId),full]);},[uid]);
+  const onSaveSettings=useCallback(async s=>{await saveWhitelistAndLock(s);setSettings(p=>({...p,whitelist:s.whitelist,courseLocked:s.courseLocked}));},[]);
+
+  const enterStudent=name=>{const theUid=session.uid;setStudent(name);setUid(theUid);setRole("student");loadStudentData(theUid);};
+  const enterAdmin=()=>{setUid(session.uid);setRole("admin");loadAdminData();};
+  const retry=role==="admin"?loadAdminData:role==="student"?()=>loadStudentData(uid):loadPublic;
+
   if(loading)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}><LotusImg size={60} float/><span style={{color:B.purple,fontSize:14,letterSpacing:1}}>Connecting…</span></div>);
-  if(error)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:24}}><LotusImg size={60}/><p style={{color:B.red,fontSize:14,textAlign:"center",maxWidth:300}}>{error}</p><button onClick={loadAll} style={{padding:"10px 24px",borderRadius:10,background:B.green,color:"white",border:"none",fontSize:14,cursor:"pointer"}}>Retry</button></div>);
+  if(error)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:24}}><LotusImg size={60}/><p style={{color:B.red,fontSize:14,textAlign:"center",maxWidth:300}}>{error}</p><button onClick={retry} style={{padding:"10px 24px",borderRadius:10,background:B.green,color:"white",border:"none",fontSize:14,cursor:"pointer"}}>Retry</button></div>);
   return(<>
-    {!role&&<LoginScreen onStudent={()=>setRole("welcome")} onAdmin={()=>setRole("admin")}/>}
-    {role==="welcome"&&settings&&<WelcomeScreen settings={settings} onEnter={n=>{setStudent(n);setRole("student");}}/>}
-    {role==="student"&&<StudentDashboard studentName={student} lessons={lessons} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz}/>}
-    {role==="admin"&&<AdminDashboard lessons={lessons} responses={responses} feedback={feedback} settings={settings} onSaveLesson={onSaveLesson} onSaveSettings={onSaveSettings} onRefresh={loadAll}/>}
+    {!role&&<LoginScreen onStudent={()=>setRole("welcome")} onAdmin={enterAdmin}/>}
+    {role==="welcome"&&settings&&<WelcomeScreen settings={settings} onEnter={enterStudent}/>}
+    {role==="student"&&lessons&&<StudentDashboard studentName={student} lessons={lessons} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz}/>}
+    {role==="admin"&&lessons&&<AdminDashboard lessons={lessons} responses={responses} feedback={feedback} settings={settings} legacyStudents={legacyStudents} onSaveLesson={onSaveLesson} onSaveSettings={onSaveSettings} onRefresh={loadAdminData} onMigrated={loadAdminData}/>}
   </>);
 }
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
