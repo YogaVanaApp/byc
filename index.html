@@ -19,6 +19,8 @@ body{background:#E2DCD0;-webkit-font-smoothing:antialiased;font-family:'DM Sans'
 .rich-editor h3{color:#5B4969;font-size:19px;font-weight:600;margin:14px 0 6px}
 .rich-editor h4{color:#8a7a1f;font-size:19px;font-weight:600;margin:14px 0 6px}
 .rich-editor img.wrap-img{float:right;width:150px;height:150px;object-fit:cover;border-radius:8px;margin:0 0 10px 16px}
+.rich-editor-reading ul{list-style:none;padding-left:0;margin:12px 0}
+.rich-editor-reading ul li{padding-left:12px;border-left:3px solid #E0B515;margin-bottom:8px}
 .rich-editor img{display:block;max-width:100%;border-radius:8px;margin:14px 0}
 .prose-reading h2{font-family:'EB Garamond',serif;font-size:1.45em;color:#5B4969;margin:1.1em 0 0.45em}
 .prose-reading h3{font-family:'EB Garamond',serif;font-size:1.2em;color:#5B4969;margin:0.9em 0 0.35em}
@@ -326,7 +328,7 @@ const BottomNav=({tabs,active,onSelect,bg=B.darkPurple,ac=B.green})=>(
 );
 
 // ── RICH EDITOR ──
-const RichEditor=({value,onChange,placeholder})=>{
+const RichEditor=({value,onChange,placeholder,variant})=>{
   const ref=useRef(null);const[imgUrl,setImgUrl]=useState("");const[imgMode,setImgMode]=useState(null);const mounted=useRef(false);
   useEffect(()=>{if(!mounted.current&&ref.current){ref.current.innerHTML=value||"";mounted.current=true;}},[]);
   const exec=(cmd,val=null)=>{document.execCommand(cmd,false,val);ref.current?.focus();};
@@ -338,6 +340,9 @@ const RichEditor=({value,onChange,placeholder})=>{
       :`<br/><img src="${imgUrl}" style="display:block;max-width:100%;border-radius:8px;margin:14px 0"/><br/>`;
     exec("insertHTML",html);setImgUrl("");setImgMode(null);
   };
+  const insertDivider=()=>{
+    exec("insertHTML",`<br/><div style="display:flex;align-items:center;justify-content:center;gap:10px;margin:22px 0" contenteditable="false"><div style="width:40px;height:1.5px;background:linear-gradient(to left,#E0B515,transparent)"></div><div style="width:6px;height:6px;border-radius:50%;background:#E0B515"></div><div style="width:40px;height:1.5px;background:linear-gradient(to right,#E0B515,transparent)"></div></div><br/>`);
+  };
   return(<div style={{border:`1px solid ${B.sage}`,borderRadius:10,overflow:"hidden"}}>
     <div style={{display:"flex",flexWrap:"wrap",gap:4,padding:"7px 10px",background:"#f5f2ec",borderBottom:`1px solid ${B.sage}`}}>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H2")}}>H2</button>
@@ -348,12 +353,13 @@ const RichEditor=({value,onChange,placeholder})=>{
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList")}}>• List</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();setImgMode(m=>m==="full"?null:"full")}} title="Full-width image">🖼 Full</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();setImgMode(m=>m==="wrap"?null:"wrap")}} title="Small image, text wraps around it">🖼 Small</button>
+      {variant==="reading"&&<button style={{...tb,background:"#fff8e6",border:"1px solid #E0B515",color:"#8a6800",fontWeight:600}} onMouseDown={e=>{e.preventDefault();insertDivider();}}>— Divider</button>}
     </div>
     {imgMode&&<div style={{display:"flex",gap:6,padding:"7px 10px",background:"#ede9e2"}}>
       <input value={imgUrl} onChange={e=>setImgUrl(e.target.value)} placeholder="Paste image URL…" style={{flex:1,padding:"5px 9px",borderRadius:7,border:`1px solid ${B.sage}`,fontSize:13}}/>
       <button onMouseDown={e=>{e.preventDefault();insertImage();}} style={{...tb,background:B.green,color:"white",border:"none",padding:"5px 12px"}}>Insert {imgMode==="wrap"?"Small":"Full-width"}</button>
     </div>}
-    <div ref={ref} contentEditable suppressContentEditableWarning data-placeholder={placeholder||"Start writing…"} onInput={()=>onChange(ref.current.innerHTML)} className="rich-editor"/>
+    <div ref={ref} contentEditable suppressContentEditableWarning data-placeholder={placeholder||"Start writing…"} onInput={()=>onChange(ref.current.innerHTML)} className={variant==="reading"?"rich-editor rich-editor-reading":"rich-editor"}/>
   </div>);
 };
 
@@ -449,7 +455,7 @@ const LessonEdit=({lesson,onSave,onBack})=>{
     </div>
     <div style={{flex:1,overflow:"auto",padding:16}}>
       {tab==="reading"&&<><div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}><span style={{fontSize:12,color:B.purple}}>Reading time (mins):</span><input type="number" min="1" max="60" value={draft.readingMins||5} onChange={e=>setDraft(p=>({...p,readingMins:parseInt(e.target.value)||5}))} style={{width:60,padding:"5px 8px",borderRadius:7,border:`1px solid ${B.sage}`,fontSize:13}}/></div>
-        <RichEditor value={draft.reading} onChange={v=>setDraft(p=>({...p,reading:v}))} placeholder="Write the pre-class reading…"/>
+        <RichEditor value={draft.reading} onChange={v=>setDraft(p=>({...p,reading:v}))} placeholder="Write the pre-class reading…" variant="reading"/>
         <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Pre-Class Reading" released={draft.readingReleased} scheduledDate={draft.readingScheduledDate} releaseDate={draft.readingReleaseDate} onNow={()=>rel("reading")} onSchedule={d=>rel("reading",d)} onUnpublish={()=>unp("reading")}/></div></>}
       {tab==="summary"&&<><RichEditor value={draft.summary} onChange={v=>setDraft(p=>({...p,summary:v}))} placeholder="Write the session summary…"/>
         <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Session Summary" released={draft.summaryReleased} scheduledDate={draft.summaryScheduledDate} releaseDate={draft.summaryReleaseDate} onNow={()=>rel("summary")} onSchedule={d=>rel("summary",d)} onUnpublish={()=>unp("summary")} extra={<button onClick={()=>window.print()} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,color:B.sage,background:"none",fontSize:11,cursor:"pointer"}}>⬇ PDF</button>}/></div></>}
@@ -776,17 +782,6 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
     <SL c={`Lesson ${lesson.lessonNumber} · Pre-Class Reading`}/>
     <h1 style={{fontSize:26,color:B.darkPurple,fontWeight:600,margin:"0 0 16px",lineHeight:1.2}}>{lesson.title}</h1>
     {lesson.reading?<div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.reading}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
-    {(lesson.quiz?.reflections||[]).length>0&&<>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:10,margin:"26px 0 18px"}}>
-        <div style={{width:40,height:1.5,background:`linear-gradient(to left, ${B.gold}, transparent)`}}/>
-        <div style={{width:6,height:6,borderRadius:"50%",background:B.gold}}/>
-        <div style={{width:40,height:1.5,background:`linear-gradient(to right, ${B.gold}, transparent)`}}/>
-      </div>
-      <div style={{fontSize:13,fontWeight:600,color:B.darkPurple,marginBottom:12}}>Reflect before our online session:</div>
-      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:8}}>
-        {lesson.quiz.reflections.map((q,i)=>(<div key={i} style={{fontStyle:"italic",color:B.purple,fontSize:16,lineHeight:1.6,paddingLeft:14,borderLeft:`2px solid ${B.gold}`}}>{q}</div>))}
-      </div>
-    </>}
     <Div/><SL c="Session Summary"/>
     {showSum?lesson.summary?<div style={{background:"rgba(163,156,15,0.07)",borderRadius:12,padding:"16px 18px",border:`1px solid ${B.sage}30`}}><div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.summary}}/></div>:<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>Summary not yet available.</p>
       :<div style={{background:"rgba(138,112,153,0.07)",borderRadius:12,padding:"16px 18px",border:`1px dashed ${B.sage}`,textAlign:"center"}}><p style={{color:B.purple,fontSize:16,fontStyle:"italic"}}>The session summary will appear here after class.</p><button style={{width:"100%",marginTop:10,padding:"11px",borderRadius:10,background:B.darkPurple,color:"white",border:"none",fontSize:12,fontWeight:400,opacity:0.55,cursor:"default",letterSpacing:0.6}}>Available After Class</button></div>}
