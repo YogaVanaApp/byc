@@ -15,6 +15,11 @@ html,body{height:100%}
 body{background:#E2DCD0;-webkit-font-smoothing:antialiased;font-family:'DM Sans',sans-serif}
 .rich-editor:empty::before{content:attr(data-placeholder);color:#b5adc0;pointer-events:none;display:block}
 .rich-editor{min-height:180px;padding:13px 15px;outline:none;font-family:'EB Garamond',serif;font-size:18px;line-height:1.8;color:#2a1f35}
+.rich-editor h2{color:#5B4969;font-size:26px;font-weight:600;margin:18px 0 8px}
+.rich-editor h3{color:#5B4969;font-size:19px;font-weight:600;margin:14px 0 6px}
+.rich-editor h4{color:#8a7a1f;font-size:19px;font-weight:600;margin:14px 0 6px}
+.rich-editor img.wrap-img{float:right;width:150px;height:150px;object-fit:cover;border-radius:8px;margin:0 0 10px 16px}
+.rich-editor img{display:block;max-width:100%;border-radius:8px;margin:14px 0}
 .prose-reading h2{font-family:'EB Garamond',serif;font-size:1.45em;color:#5B4969;margin:1.1em 0 0.45em}
 .prose-reading h3{font-family:'EB Garamond',serif;font-size:1.2em;color:#5B4969;margin:0.9em 0 0.35em}
 .prose-reading p{margin-bottom:0.95em;line-height:1.85;font-size:18px;color:#2a1f35}
@@ -322,22 +327,31 @@ const BottomNav=({tabs,active,onSelect,bg=B.darkPurple,ac=B.green})=>(
 
 // ── RICH EDITOR ──
 const RichEditor=({value,onChange,placeholder})=>{
-  const ref=useRef(null);const[imgUrl,setImgUrl]=useState("");const[showImg,setShowImg]=useState(false);const mounted=useRef(false);
+  const ref=useRef(null);const[imgUrl,setImgUrl]=useState("");const[imgMode,setImgMode]=useState(null);const mounted=useRef(false);
   useEffect(()=>{if(!mounted.current&&ref.current){ref.current.innerHTML=value||"";mounted.current=true;}},[]);
   const exec=(cmd,val=null)=>{document.execCommand(cmd,false,val);ref.current?.focus();};
   const tb={padding:"5px 8px",borderRadius:6,border:`1px solid ${B.sage}`,background:"white",cursor:"pointer",color:B.adminDark,fontSize:13};
+  const insertImage=()=>{
+    if(!imgUrl.trim())return;
+    const html=imgMode==="wrap"
+      ?`<img class="wrap-img" src="${imgUrl}"/>`
+      :`<br/><img src="${imgUrl}" style="display:block;max-width:100%;border-radius:8px;margin:14px 0"/><br/>`;
+    exec("insertHTML",html);setImgUrl("");setImgMode(null);
+  };
   return(<div style={{border:`1px solid ${B.sage}`,borderRadius:10,overflow:"hidden"}}>
     <div style={{display:"flex",flexWrap:"wrap",gap:4,padding:"7px 10px",background:"#f5f2ec",borderBottom:`1px solid ${B.sage}`}}>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H2")}}>H2</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H3")}}>H3</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H4")}}>H4</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("bold")}}><b>B</b></button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("italic")}}><i>I</i></button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList")}}>• List</button>
-      <button style={tb} onMouseDown={e=>{e.preventDefault();setShowImg(v=>!v)}}>🖼</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();setImgMode(m=>m==="full"?null:"full")}} title="Full-width image">🖼 Full</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();setImgMode(m=>m==="wrap"?null:"wrap")}} title="Small image, text wraps around it">🖼 Small</button>
     </div>
-    {showImg&&<div style={{display:"flex",gap:6,padding:"7px 10px",background:"#ede9e2"}}>
+    {imgMode&&<div style={{display:"flex",gap:6,padding:"7px 10px",background:"#ede9e2"}}>
       <input value={imgUrl} onChange={e=>setImgUrl(e.target.value)} placeholder="Paste image URL…" style={{flex:1,padding:"5px 9px",borderRadius:7,border:`1px solid ${B.sage}`,fontSize:13}}/>
-      <button onMouseDown={e=>{e.preventDefault();if(!imgUrl.trim())return;exec("insertHTML",`<img src="${imgUrl}" style="max-width:100%;border-radius:8px;margin:8px 0"/>`);setImgUrl("");setShowImg(false);}} style={{...tb,background:B.green,color:"white",border:"none",padding:"5px 12px"}}>Insert</button>
+      <button onMouseDown={e=>{e.preventDefault();insertImage();}} style={{...tb,background:B.green,color:"white",border:"none",padding:"5px 12px"}}>Insert {imgMode==="wrap"?"Small":"Full-width"}</button>
     </div>}
     <div ref={ref} contentEditable suppressContentEditableWarning data-placeholder={placeholder||"Start writing…"} onInput={()=>onChange(ref.current.innerHTML)} className="rich-editor"/>
   </div>);
@@ -427,7 +441,7 @@ const LessonEdit=({lesson,onSave,onBack})=>{
     <AppHeader bg={B.adminDark} admin onBack={onBack} sub={COURSE_NAME}/>
     <div style={{background:"#3a2a4e",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
       <div><div style={{fontSize:8.5,color:"rgba(255,255,255,0.45)",letterSpacing:1.5,textTransform:"uppercase",marginBottom:2}}>Lesson {lesson.lessonNumber}</div>
-        <input value={draft.title} onChange={e=>setDraft(p=>({...p,title:e.target.value}))} style={{background:"transparent",border:"none",color:"white",fontSize:16,fontWeight:600,outline:"none",fontFamily:"'EB Garamond',serif"}}/></div>
+        <input value={draft.title} onChange={e=>setDraft(p=>({...p,title:e.target.value}))} style={{background:"transparent",border:"none",color:"#E0B515",fontSize:16,fontWeight:600,outline:"none",fontFamily:"'EB Garamond',serif"}}/></div>
       <Badge status={lessonStatus(draft)}/>
     </div>
     <div style={{display:"flex",background:"white",borderBottom:`1px solid ${B.sage}`,flexShrink:0}}>
@@ -762,6 +776,13 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
     <SL c={`Lesson ${lesson.lessonNumber} · Pre-Class Reading`}/>
     <h1 style={{fontSize:26,color:B.darkPurple,fontWeight:600,margin:"0 0 16px",lineHeight:1.2}}>{lesson.title}</h1>
     {lesson.reading?<div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.reading}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
+    {(lesson.quiz?.reflections||[]).length>0&&<>
+      <div style={{height:1,background:B.purple,opacity:0.25,margin:"26px 0 18px"}}/>
+      <div style={{fontSize:13,fontWeight:600,color:B.darkPurple,marginBottom:12}}>Reflect before our online session:</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:8}}>
+        {lesson.quiz.reflections.map((q,i)=>(<div key={i} style={{fontStyle:"italic",color:B.purple,fontSize:16,lineHeight:1.6,paddingLeft:14,borderLeft:`2px solid ${B.gold}`}}>{q}</div>))}
+      </div>
+    </>}
     <Div/><SL c="Session Summary"/>
     {showSum?lesson.summary?<div style={{background:"rgba(163,156,15,0.07)",borderRadius:12,padding:"16px 18px",border:`1px solid ${B.sage}30`}}><div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.summary}}/></div>:<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>Summary not yet available.</p>
       :<div style={{background:"rgba(138,112,153,0.07)",borderRadius:12,padding:"16px 18px",border:`1px dashed ${B.sage}`,textAlign:"center"}}><p style={{color:B.purple,fontSize:16,fontStyle:"italic"}}>The session summary will appear here after class.</p><button style={{width:"100%",marginTop:10,padding:"11px",borderRadius:10,background:B.darkPurple,color:"white",border:"none",fontSize:12,fontWeight:400,opacity:0.55,cursor:"default",letterSpacing:0.6}}>Available After Class</button></div>}
