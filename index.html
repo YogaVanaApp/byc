@@ -363,7 +363,7 @@ const RichEditor=({value,onChange,placeholder,variant})=>{
       <input value={imgUrl} onChange={e=>setImgUrl(e.target.value)} placeholder="Paste image URL…" style={{flex:1,padding:"5px 9px",borderRadius:7,border:`1px solid ${B.sage}`,fontSize:13}}/>
       <button onMouseDown={e=>{e.preventDefault();insertImage();}} style={{...tb,background:B.green,color:"white",border:"none",padding:"5px 12px"}}>Insert {imgMode==="wrap"?"Small":"Full-width"}</button>
     </div>}
-    <div ref={ref} contentEditable suppressContentEditableWarning data-placeholder={placeholder||"Start writing…"} onInput={()=>onChange(ref.current.innerHTML)} className={variant==="reading"?"rich-editor rich-editor-reading":"rich-editor"}/>
+    <div ref={ref} contentEditable suppressContentEditableWarning data-placeholder={placeholder||"Start writing…"} onInput={()=>onChange(ref.current.innerHTML)} onPaste={e=>{e.preventDefault();const text=(e.clipboardData||window.clipboardData).getData("text/plain");document.execCommand("insertText",false,text);}} className={variant==="reading"?"rich-editor rich-editor-reading":"rich-editor"}/>
   </div>);
 };
 
