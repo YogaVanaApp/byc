@@ -28,6 +28,10 @@ body{background:#E2DCD0;-webkit-font-smoothing:antialiased;font-family:'DM Sans'
 .prose-reading ul{padding-left:1.5em;margin-bottom:0.95em}
 .prose-reading li{margin-bottom:0.45em;line-height:1.75;font-size:18px;color:#2a1f35}
 .prose-reading img{max-width:100%;border-radius:10px;margin:10px 0}
+.prose-reading-body h4{font-family:'EB Garamond',serif;font-size:1.2em;color:#8a7a1f;margin:0.9em 0 0.35em}
+.prose-reading-body ul{list-style:none;padding-left:0}
+.prose-reading-body ul li{padding-left:14px;border-left:3px solid #E0B515;margin-bottom:10px}
+.prose-reading-body img.wrap-img{float:right;width:150px;height:150px;object-fit:cover;border-radius:8px;margin:0 0 10px 16px;max-width:150px}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
 @keyframes floatLotus{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
@@ -781,7 +785,7 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
     </div>}
     <SL c={`Lesson ${lesson.lessonNumber} · Pre-Class Reading`}/>
     <h1 style={{fontSize:26,color:B.darkPurple,fontWeight:600,margin:"0 0 16px",lineHeight:1.2}}>{lesson.title}</h1>
-    {lesson.reading?<div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.reading}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
+    {lesson.reading?<div className="prose-reading prose-reading-body" dangerouslySetInnerHTML={{__html:lesson.reading}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
     <Div/><SL c="Session Summary"/>
     {showSum?lesson.summary?<div style={{background:"rgba(163,156,15,0.07)",borderRadius:12,padding:"16px 18px",border:`1px solid ${B.sage}30`}}><div className="prose-reading" dangerouslySetInnerHTML={{__html:lesson.summary}}/></div>:<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>Summary not yet available.</p>
       :<div style={{background:"rgba(138,112,153,0.07)",borderRadius:12,padding:"16px 18px",border:`1px dashed ${B.sage}`,textAlign:"center"}}><p style={{color:B.purple,fontSize:16,fontStyle:"italic"}}>The session summary will appear here after class.</p><button style={{width:"100%",marginTop:10,padding:"11px",borderRadius:10,background:B.darkPurple,color:"white",border:"none",fontSize:12,fontWeight:400,opacity:0.55,cursor:"default",letterSpacing:0.6}}>Available After Class</button></div>}
