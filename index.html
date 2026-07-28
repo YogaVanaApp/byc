@@ -53,17 +53,67 @@ const EMAIL_DOMAIN="yogavana.app";
 const B={green:"#A39C0F",purple:"#8A7099",darkPurple:"#5B4969",adminDark:"#2C1F3A",linen:"#E2DCD0",sage:"#7B8B6F",gold:"#E0B515",metalGold:"#d4af37",red:"#C0392B"};
 const LOTUS_URL="https://res.cloudinary.com/dudunfdov/image/upload/v1781093940/background-removed-background-removed-2_wz5nxf.png";
 const CURVED_LOGO="https://res.cloudinary.com/dudunfdov/image/upload/v1781539507/background-removed-background-removed-2_copy_ctn2lr.png";
-// v2
+// v3 — batch/cohort system + streaks, journal, journey map, badges, recap.
+// DATA_ROOT switches the entire app between production and staging data with
+// zero risk of cross-contamination — change this one line, nothing else.
+const DATA_ROOT="batches"; // PRODUCTION build.
+const DEFAULT_WINDOW_DAYS=60;
+const EXTENSION_GRANT_DAYS=14;
+const bp=(batchId,p)=>`${DATA_ROOT}/${batchId}/${p}`;
 
 const LotusImg=({size=40,float=false,dark=false})=>(<img src={LOTUS_URL} alt="lotus" className={float?"lotus-float":""} style={{width:size,height:size,objectFit:"contain",display:"block",flexShrink:0,filter:dark?"brightness(10) saturate(0.8)":"brightness(1.8) saturate(0.55)"}}/>);
 const CurvedLogo=({width=150,opacity=0.5})=>(<img src={CURVED_LOGO} alt="Yoga Vana India" style={{width,maxWidth:"65vw",display:"block",margin:"0 auto",opacity}}/>);
+
+// ── ICONS (thin line-art, tinted per approved mockups) ──
+const IconLeaf=({color,size=20})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.4"><path d="M12 21c-5-1-8-5-8-10 0-3 2-6 6-7 5-1 9 2 10 7 1 6-3 10-8 10z"/><path d="M12 21c0-6 1-11 6-15"/></svg>);
+const IconMoon=({color,size=20})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.4"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>);
+const IconCircleOpen=({color,size=20})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.4" strokeDasharray="2.5 3"><circle cx="12" cy="12" r="8"/></svg>);
+const IconSprout=({color,size=30})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.3"><path d="M12 20V11"/><path d="M12 12c0-3.5 2.5-6 6-6 .3 3.5-2 6-6 6z"/><path d="M12 14c0-3-2.2-5.2-5.5-5.4C6.2 12 8.5 14.3 12 14z"/></svg>);
+const IconNotebook=({color,size=20})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.3"><path d="M7.5 4.5h11v15h-11z"/><path d="M9.7 4.5v15"/><circle cx="6.3" cy="8" r="0.9"/><circle cx="6.3" cy="12" r="0.9"/><circle cx="6.3" cy="16" r="0.9"/><path d="M12.3 8h4M12.3 10.5h4M12.3 13h4M12.3 15.5h2.5"/></svg>);
+const IconOnlineSession=({color,size=20})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.3"><rect x="3.5" y="4" width="17" height="13" rx="2"/><path d="M3.5 10.5h17M12 4v13"/><circle cx="8" cy="8" r="1.15"/><path d="M5.8 10c.4-1.1 1.2-1.7 2.2-1.7s1.8.6 2.2 1.7"/><circle cx="16" cy="8" r="1.15"/><path d="M13.8 10c.4-1.1 1.2-1.7 2.2-1.7s1.8.6 2.2 1.7"/><path d="M9 20.5h6"/></svg>);
+const IconQuizDue=({color,size=20})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.3"><path d="M9.5 3.5h8l3 3v14h-11z"/><path d="M12 7.5h5M12 10h5"/><circle cx="8.5" cy="15" r="3.6"/><path d="M8.5 12.9V15l1.6 1"/><path d="M1.5 13.5h2.5M1.8 15.3h2M2.3 17h1.5"/></svg>);
+const IconLock=({color,size=16})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>);
+const IconImage=({color,size=16})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.5"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 16.5l5-4.5 4 3.5 3-2.5 4 4"/></svg>);
+const IconDownload=({color,size=16})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.6"><path d="M12 4v11"/><path d="M7.5 11L12 15.5 16.5 11"/><path d="M5 19.5h14"/></svg>);
+const IconGradCap=({color,size=26})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.3"><path d="M4.5 20V11.5c2-.9 4.2-.9 6.2 0v8.5"/><path d="M17 20V11.5c-2-.9-4.2-.9-6.2 0v8.5"/><path d="M4 20.3h6.7M17.3 20.3h-6.6"/><path d="M3.5 8.2L11.3 5l7.2 3.2-7.2 3.1-7.8-3.1z"/><path d="M9 9.7v2.6c0 1 1.2 1.9 2.6 1.9s2.6-.9 2.6-1.9V9.7"/><circle cx="19" cy="6.2" r="3.1"/><path d="M17.6 6.2l1 1 1.9-2.1"/></svg>);
+const IconGate=({color,size=26})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.3"><path d="M4 20V7l8-4 8 4v13"/><path d="M4 20h16"/><path d="M9 20v-7h6v7"/></svg>);
+const IconCheck=({color,size=14})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><path d="M5 13l4.5 4.5L19 7"/></svg>);
+const IconPlus=({color="white",size=14})=>(<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>);
+
+const STATUS_STYLE={
+  "on-time":{fg:"#7C9270",bg:"#EEF2E9",label:"Completed on time",Icon:IconLeaf},
+  late:{fg:"#B08B1F",bg:"#FBF3DC",label:"Completed late",Icon:IconMoon},
+  missed:{fg:"#B98A9A",bg:"#F6EEF1",label:"Not completed",Icon:IconCircleOpen},
+  pending:{fg:B.purple,bg:"#F0EEF2",label:"Not yet due",Icon:IconLeaf},
+};
+const StatusPill=({status})=>{const s=STATUS_STYLE[status]||STATUS_STYLE.pending;const Icon=s.Icon;return(<span style={{display:"inline-flex",alignItems:"center",gap:7,padding:"4px 11px",borderRadius:20,background:s.bg,color:s.fg,fontSize:12,fontWeight:500,fontFamily:"'EB Garamond',serif"}}><Icon color={s.fg} size={13}/>{s.label}</span>);};
+
+// Given a lesson's dueAt and a student's response (or lack of one), compute completion status.
+const completionStatus=(lesson,response)=>{
+  if(!lesson.dueAt)return response?"on-time":"pending";
+  const due=new Date(lesson.dueAt).getTime();
+  if(response){const submitted=new Date(response.submittedAt).getTime();return submitted<=due?"on-time":"late";}
+  return Date.now()>due?"missed":"pending";
+};
+// Streak = consecutive weekly lessons (by lesson order) completed on time, most recent first.
+const computeStreak=(lessons,responses)=>{
+  const byId={};responses.forEach(r=>{byId[r.lessonId]=r;});
+  const dueLessons=[...lessons].filter(l=>l.dueAt&&new Date(l.dueAt).getTime()<=Date.now()).sort((a,b)=>b.id-a.id);
+  let streak=0;
+  for(const l of dueLessons){
+    const status=completionStatus(l,byId[l.id]);
+    if(status==="on-time")streak++;
+    else break;
+  }
+  return streak;
+};
 
 // ── AUTH / IDENTITY ──
 // Students never see "email" — this just gives Firebase Auth a stable identity
 // derived from their name, so security rules can tell students apart without
 // requiring a real inbox. Admin uses one real Firebase Auth account.
 const keyOf=name=>name.trim().toLowerCase().replace(/\s+/g,"_").replace(/[^a-z0-9_]/g,"");
-const pseudoEmail=key=>`${key}@${EMAIL_DOMAIN}`;
+const pseudoEmail=(batchId,key)=>`${key}.${batchId}@${EMAIL_DOMAIN}`;
 const derivePassword=pin=>`yv-${pin}-9k2qz`; // Firebase requires 6+ chars; PIN alone is 4
 
 let session={idToken:null,refreshToken:null,expiresAt:0,uid:null,email:null};
@@ -93,7 +143,7 @@ const pad=n=>String(n).padStart(2,"0");
 const fmtDate=iso=>{if(!iso)return"";const d=new Date(iso);return`${pad(d.getDate())} / ${pad(d.getMonth()+1)} / ${d.getFullYear()}`;};
 const fmtDT=iso=>{if(!iso)return"";const d=new Date(iso);return`${fmtDate(iso)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;};
 const todayISO=()=>new Date().toISOString().split("T")[0];
-const mkLesson=n=>({id:n,lessonNumber:n,title:`Lesson ${n}`,reading:"",summary:"",quiz:{mcQuestions:[],reflections:[]},resources:[],readingReleased:false,readingScheduledDate:null,readingReleaseDate:null,summaryReleased:false,summaryScheduledDate:null,summaryReleaseDate:null,quizReleased:false,quizScheduledDate:null,quizReleaseDate:null,resourcesReleased:false,readingMins:5});
+const mkLesson=n=>({id:n,lessonNumber:n,title:`Lesson ${n}`,reading:"",summary:"",quiz:{mcQuestions:[],reflections:[]},resources:[],readingReleased:false,readingScheduledDate:null,readingReleaseDate:null,summaryReleased:false,summaryScheduledDate:null,summaryReleaseDate:null,quizReleased:false,quizScheduledDate:null,quizReleaseDate:null,resourcesReleased:false,readingMins:5,dueAt:null});
 const lessonStatus=l=>{if(l.readingReleased&&l.summaryReleased&&l.quizReleased)return"Released";if(l.readingReleased)return"Reading Live";if(l.readingScheduledDate||l.summaryScheduledDate)return"Scheduled";return"Draft";};
 
 const rtUrl=async p=>{const t=await getToken();return `${RTDB_URL}/${p}.json${t?`?auth=${t}`:""}`;};
@@ -101,14 +151,48 @@ const rtGet=async p=>{try{const r=await fetch(await rtUrl(p));if(!r.ok)return nu
 const rtSet=async(p,d)=>{try{const r=await fetch(await rtUrl(p),{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(d)});return r.ok;}catch{return false;}};
 const rtGetAll=async p=>{try{const r=await fetch(await rtUrl(p));if(!r.ok)return[];const d=await r.json();return d?Object.values(d):[];}catch{return[];}};
 const rtDel=async p=>{try{const r=await fetch(await rtUrl(p),{method:"DELETE"});return r.ok;}catch{return false;}};
-// Note: rtGet/rtSet above already omit the auth param when there's no session yet,
-// so they work fine for the public settings nodes (whitelist/courseLocked/registeredNames)
-// before a student or admin has signed in.
+
+// ── BATCH INDEX ──
+// A small, public-read map of every batch that's ever existed: {batchId: {name,status,order}}.
+// Lets the welcome screen figure out which batch a name belongs to without
+// needing to know batch IDs in advance. Admin-only write.
+const loadBatchIndex=()=>rtGet(`${DATA_ROOT}/_index`).then(d=>d||{});
+const saveBatchIndexEntry=(batchId,entry)=>rtSet(`${DATA_ROOT}/_index/${batchId}`,entry);
+
+const accessState=(meta)=>{
+  // "active": course still running, no window countdown yet.
+  // "window": course marked complete, within the post-course access window.
+  // "locked": window has closed.
+  if(!meta)return"active";
+  if(meta.status==="active")return"active";
+  if(!meta.completedAt)return"active";
+  const windowDays=meta.windowDays||DEFAULT_WINDOW_DAYS;
+  const deadline=new Date(meta.completedAt).getTime()+windowDays*86400000;
+  return Date.now()<deadline?"window":"locked";
+};
+const daysLeft=(meta)=>{
+  if(!meta?.completedAt)return null;
+  const windowDays=meta.windowDays||DEFAULT_WINDOW_DAYS;
+  const deadline=new Date(meta.completedAt).getTime()+windowDays*86400000;
+  return Math.max(0,Math.ceil((deadline-Date.now())/86400000));
+};
+// A per-student extension (grantedUntil) overrides a locked batch for that one student.
+const studentAccessAllowed=(meta,regEntry)=>{
+  const state=accessState(meta);
+  if(state!=="locked")return true;
+  if(regEntry?.extendedUntil&&Date.now()<new Date(regEntry.extendedUntil).getTime())return true;
+  return false;
+};
+
+const loadBatchMeta=(batchId)=>rtGet(bp(batchId,"meta"));
+const saveBatchMeta=(batchId,meta)=>Promise.all([rtSet(bp(batchId,"meta"),meta),saveBatchIndexEntry(batchId,{name:meta.name,status:meta.status,order:meta.order||0})]);
+const markCourseComplete=(batchId,meta)=>saveBatchMeta(batchId,{...meta,status:"window",completedAt:new Date().toISOString()});
 
 // canWrite=true only for admin: students can read lessons but the "auto release by
 // scheduled date" write-back is an admin-only action under the new rules anyway.
-const loadLessons=async(canWrite=false)=>{
-  const results=await Promise.all(Array.from({length:20},(_,i)=>rtGet(`lessons/${i+1}`)));
+const loadLessons=async(batchId,lessonCount,canWrite=false)=>{
+  const n=lessonCount||20;
+  const results=await Promise.all(Array.from({length:n},(_,i)=>rtGet(bp(batchId,`lessons/${i+1}`))));
   let lessons=results.map((l,i)=>l||mkLesson(i+1));
   const today=todayISO();let changed=false;
   lessons=lessons.map(l=>{let u={...l};
@@ -116,38 +200,69 @@ const loadLessons=async(canWrite=false)=>{
     if(!u.summaryReleased&&u.summaryScheduledDate&&u.summaryScheduledDate<=today){u={...u,summaryReleased:true,summaryReleaseDate:fmtDate(u.summaryScheduledDate+"T00:00:00")};changed=true;}
     if(!u.quizReleased&&u.quizScheduledDate&&u.quizScheduledDate<=today){u={...u,quizReleased:true,quizReleaseDate:fmtDate(u.quizScheduledDate+"T00:00:00")};changed=true;}
     return u;});
-  if(changed&&canWrite)await Promise.all(lessons.map(l=>rtSet(`lessons/${l.id}`,l)));
+  if(changed&&canWrite)await Promise.all(lessons.map(l=>rtSet(bp(batchId,`lessons/${l.id}`),l)));
   return lessons;
 };
-const saveLesson=l=>rtSet(`lessons/${l.id}`,l);
+const saveLesson=(batchId,l)=>rtSet(bp(batchId,`lessons/${l.id}`),l);
 
-// quizResponses and feedback are now keyed by Firebase Auth uid so security rules
+// quizResponses and feedback are keyed by Firebase Auth uid so security rules
 // can restrict each student to their own data. studentName/lessonId are still
 // stored inside each record for display, so existing UI code needs no changes.
-const saveResponse=(uid,e)=>rtSet(`quizResponses/${uid}/${e.lessonId}`,{...e,uid});
-const loadMyResponses=async uid=>{const d=await rtGet(`quizResponses/${uid}`);return d?Object.values(d):[];};
-const loadAllResponses=async registeredMap=>{
-  const uids=Object.values(registeredMap||{});
-  const chunks=await Promise.all(uids.map(uid=>rtGet(`quizResponses/${uid}`)));
+const saveResponse=(batchId,uid,e)=>rtSet(bp(batchId,`quizResponses/${uid}/${e.lessonId}`),{...e,uid});
+const loadMyResponses=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`quizResponses/${uid}`));return d?Object.values(d):[];};
+const loadAllResponses=async(batchId,registeredMap)=>{
+  const uids=Object.values(registeredMap||{}).map(v=>typeof v==="string"?v:v.uid).filter(Boolean);
+  const chunks=await Promise.all(uids.map(uid=>rtGet(bp(batchId,`quizResponses/${uid}`))));
   return chunks.flatMap(c=>c?Object.values(c):[]);
 };
-const saveFeedback=(uid,lessonId,fb)=>rtSet(`feedback/${uid}/${lessonId}`,fb);
-const loadMyFeedback=async uid=>{const d=await rtGet(`feedback/${uid}`);return d?Object.values(d):[];};
-const loadAllFeedback=async registeredMap=>{
-  const uids=Object.values(registeredMap||{});
-  const chunks=await Promise.all(uids.map(uid=>rtGet(`feedback/${uid}`)));
+const saveFeedback=(batchId,uid,lessonId,fb)=>rtSet(bp(batchId,`feedback/${uid}/${lessonId}`),fb);
+const loadMyFeedback=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`feedback/${uid}`));return d?Object.values(d):[];};
+const loadAllFeedback=async(batchId,registeredMap)=>{
+  const uids=Object.values(registeredMap||{}).map(v=>typeof v==="string"?v:v.uid).filter(Boolean);
+  const chunks=await Promise.all(uids.map(uid=>rtGet(bp(batchId,`feedback/${uid}`))));
   return chunks.flatMap(c=>c?Object.values(c):[]);
 };
 
-// Public settings (readable pre-login so the welcome screen can check the whitelist).
-// "registeredNames" maps a student's name-key -> their Firebase Auth uid, and replaces
-// the old plaintext-PIN "settings/students" node entirely.
-const loadPublicSettings=async()=>{
-  const[whitelist,courseLocked,registeredNames]=await Promise.all([rtGet("settings/whitelist"),rtGet("settings/courseLocked"),rtGet("settings/registeredNames")]);
-  return{whitelist:whitelist||[],courseLocked:!!courseLocked,registeredNames:registeredNames||{}};
+// Private journal — one entry per lesson, per student. Admin never reads this,
+// there is intentionally no loadAllJournals function anywhere in this app.
+const saveJournalEntry=(batchId,uid,lessonId,entry)=>rtSet(bp(batchId,`journal/${uid}/${lessonId}`),entry);
+const loadMyJournal=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`journal/${uid}`));return d||{};};
+
+// Course-complete badge (minimal set — just the one milestone).
+const saveBadge=(batchId,uid,badgeKey,val)=>rtSet(bp(batchId,`badges/${uid}/${badgeKey}`),val);
+const loadMyBadges=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`badges/${uid}`));return d||{};};
+
+// Training Lessons Recap — one admin-curated Q&A list per batch, released manually.
+const loadRecap=(batchId)=>rtGet(bp(batchId,"recap"));
+const saveRecap=(batchId,recap)=>rtSet(bp(batchId,"recap"),recap);
+
+// Post-course access extension requests.
+const submitExtensionRequest=(batchId,uid,name,note)=>rtSet(bp(batchId,`extensionRequests/${uid}`),{name,note,requestedAt:new Date().toISOString(),status:"pending"});
+const loadExtensionRequests=async(batchId)=>{const d=await rtGet(bp(batchId,"extensionRequests"));return d||{};};
+const resolveExtensionRequest=async(batchId,uid,granted)=>{
+  await rtDel(bp(batchId,`extensionRequests/${uid}`));
+  if(granted){
+    const until=new Date(Date.now()+EXTENSION_GRANT_DAYS*86400000).toISOString();
+    const reg=await rtGet(bp(batchId,"registeredNames"))||{};
+    const matchKey=Object.keys(reg).find(k=>(typeof reg[k]==="object"?reg[k].uid:reg[k])===uid);
+    if(matchKey){
+      const cur=reg[matchKey];
+      const curUid=typeof cur==="string"?cur:cur.uid;
+      await rtSet(bp(batchId,`registeredNames/${matchKey}`),{uid:curUid,extendedUntil:until});
+    }
+  }
+  return true;
 };
-const saveWhitelistAndLock=async s=>{await Promise.all([rtSet("settings/whitelist",s.whitelist||[]),rtSet("settings/courseLocked",!!s.courseLocked)]);return true;};
-const registerName=(key,uid)=>rtSet(`settings/registeredNames/${key}`,uid);
+
+// Public batch settings (readable pre-login so the welcome screen can check the whitelist).
+// "registeredNames" maps a student's name-key -> {uid, extendedUntil?}, and replaces
+// the old plaintext-PIN "settings/students" node entirely.
+const loadPublicBatchSettings=async(batchId)=>{
+  const[whitelist,registeredNames,meta]=await Promise.all([rtGet(bp(batchId,"whitelist")),rtGet(bp(batchId,"registeredNames")),rtGet(bp(batchId,"meta"))]);
+  return{whitelist:whitelist||[],registeredNames:registeredNames||{},meta:meta||null};
+};
+const saveWhitelist=(batchId,whitelist)=>rtSet(bp(batchId,"whitelist"),whitelist);
+const registerName=(batchId,key,uid)=>rtSet(bp(batchId,`registeredNames/${key}`),{uid});
 // Legacy (pre-migration) plaintext-PIN store — admin-only, used once by the migration tool.
 const loadLegacyStudents=()=>rtGet("settings/students");
 const deleteLegacyStudents=()=>rtDel("settings/students");
@@ -325,6 +440,11 @@ const LessonEdit=({lesson,onSave,onBack})=>{
       {tab==="summary"&&<><RichEditor value={draft.summary} onChange={v=>setDraft(p=>({...p,summary:v}))} placeholder="Write the session summary…"/>
         <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Session Summary" released={draft.summaryReleased} scheduledDate={draft.summaryScheduledDate} releaseDate={draft.summaryReleaseDate} onNow={()=>rel("summary")} onSchedule={d=>rel("summary",d)} onUnpublish={()=>unp("summary")} extra={<button onClick={()=>window.print()} style={{padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,color:B.sage,background:"none",fontSize:11,cursor:"pointer"}}>⬇ PDF</button>}/></div></>}
       {tab==="quiz"&&<><QuizEditor quiz={draft.quiz} onChange={q=>setDraft(p=>({...p,quiz:q}))}/>
+        <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}>
+          <div style={{fontSize:12,fontWeight:600,color:B.adminDark,marginBottom:8}}>Quiz due date &amp; time</div>
+          <input type="datetime-local" value={draft.dueAt?draft.dueAt.slice(0,16):""} onChange={e=>setDraft(p=>({...p,dueAt:e.target.value?new Date(e.target.value).toISOString():null}))} style={{width:"100%",padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif"}}/>
+          <div style={{fontSize:10.5,color:B.sage,fontStyle:"italic",marginTop:6}}>Drives the streak, the "submit tonight" reminder, and the on-time/late/missed status shown to you and the student.</div>
+        </div>
         <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Quiz & Reflections" released={draft.quizReleased} scheduledDate={draft.quizScheduledDate} releaseDate={draft.quizReleaseDate} onNow={()=>rel("quiz")} onSchedule={d=>rel("quiz",d)} onUnpublish={()=>unp("quiz")}/></div></>}
       {tab==="resources"&&<><ResourcesEditor resources={draft.resources} onChange={r=>setDraft(p=>({...p,resources:r}))}/>
         <div style={{marginTop:16,background:"white",borderRadius:12,padding:16,border:`1px solid ${B.sage}`}}><ReleasePanel title="Resources" released={draft.resourcesReleased} scheduledDate={null} releaseDate={null} onNow={()=>rel("resources")} onSchedule={d=>rel("resources",d)} onUnpublish={()=>unp("resources")}/></div></>}
@@ -333,97 +453,103 @@ const LessonEdit=({lesson,onSave,onBack})=>{
   </div>);
 };
 
-// ── ONE-TIME SECURITY MIGRATION ──
-// Moves students created under the old plaintext-PIN system onto real Firebase Auth
-// accounts, and moves their quizResponses/feedback from the old name-based keys to
-// the new uid-based paths. Must be run by admin BEFORE the locked-down rules are
-// pasted into the Firebase console (it needs the old permissive rules to still be
-// active, since it reads/writes across every student's data).
-const runMigration=async(legacyStudents,onProgress)=>{
-  const entries=Object.entries(legacyStudents||{});
-  const results=[];
-  for(const[oldKey,rec] of entries){
-    const name=rec.name||oldKey.replace(/_/g," ");
-    const k=keyOf(name);const pin=rec.pinHash;
-    let uid=null;
-    try{
-      const d=await authSignUp(pseudoEmail(k),derivePassword(pin));
-      uid=d.localId;
-    }catch(e){
-      if(String(e.message).includes("EMAIL_EXISTS")){
-        try{const d2=await authSignIn(pseudoEmail(k),derivePassword(pin));uid=d2.localId;}
-        catch(e2){results.push({name,ok:false,error:"Account exists under a different PIN — needs manual fix"});onProgress&&onProgress(results.length,entries.length,name);continue;}
-      }else{results.push({name,ok:false,error:e.message});onProgress&&onProgress(results.length,entries.length,name);continue;}
-    }
-    await registerName(k,uid);
-    await Promise.all(Array.from({length:20},async(_,i)=>{
-      const lessonId=i+1;
-      const oldResp=await rtGet(`quizResponses/${lessonId}_${oldKey}`);
-      if(oldResp){await rtSet(`quizResponses/${uid}/${lessonId}`,{...oldResp,uid});await rtDel(`quizResponses/${lessonId}_${oldKey}`);}
-      const oldFb=await rtGet(`feedback/${lessonId}_${oldKey}`);
-      if(oldFb){await rtSet(`feedback/${uid}/${lessonId}`,{...oldFb,uid});await rtDel(`feedback/${lessonId}_${oldKey}`);}
-    }));
-    results.push({name,ok:true});
-    onProgress&&onProgress(results.length,entries.length,name);
-  }
-  if(results.every(r=>r.ok))await deleteLegacyStudents();
-  return results;
-};
+// Note: the one-time plaintext-PIN → Firebase Auth migration ran once in production
+// already and is not part of the batch system. Removed to avoid confusion.
 
-const MigrationPanel=({legacyStudents,onDone})=>{
-  const[running,setRunning]=useState(false);const[log,setLog]=useState([]);const[done,setDone]=useState(false);
-  const count=Object.keys(legacyStudents||{}).length;
-  if(count===0)return null;
-  const run=async()=>{setRunning(true);setLog([]);const results=await runMigration(legacyStudents,(i,total,name)=>setLog(p=>[...p,`${i}/${total} — ${name}`]));setRunning(false);setDone(true);onDone&&onDone(results);};
-  return(<div style={{background:"#fff8e6",border:`1.5px solid ${B.gold}`,borderRadius:12,padding:"14px 15px",marginBottom:14}}>
-    <div style={{fontWeight:700,fontSize:13,color:"#8a6800",marginBottom:6}}>⚠ One-Time Security Migration</div>
-    <div style={{fontSize:12,color:B.adminDark,lineHeight:1.6,marginBottom:10}}>Found {count} student{count!==1?"s":""} still on the old login system. Run this once — and only while the Firebase rules are still the old (open) ones, before you paste in the new locked-down rules.</div>
-    {!done&&<button onClick={run} disabled={running} style={{width:"100%",padding:"11px",borderRadius:9,background:running?"#888":B.red,color:"white",border:"none",fontSize:13,fontWeight:600,cursor:running?"wait":"pointer"}}>{running?"Migrating…":`Migrate ${count} student${count!==1?"s":""}`}</button>}
-    {log.length>0&&<div style={{marginTop:10,maxHeight:140,overflow:"auto",fontSize:11,color:B.purple,fontFamily:"monospace"}}>{log.map((l,i)=><div key={i}>{l}</div>)}</div>}
-    {done&&<div style={{marginTop:8,fontSize:12,color:B.green,fontWeight:600}}>Migration complete. You can now paste the new rules into Firebase.</div>}
-  </div>);
-};
 
 // ── ADMIN SETTINGS ──
-const AdminSettings=({settings,onSave,legacyStudents,onMigrated})=>{
-  const[s,setS]=useState({...settings,whitelist:[...(settings.whitelist||[])]});
+const AdminSettings=({batchId,meta,whitelist,extensionRequests,onSaveWhitelist,onMarkComplete,onSetNextSession,onResolveExtension})=>{
+  const[wl,setWl]=useState([...(whitelist||[])]);
   const[newFirst,setNewFirst]=useState("");const[newSurname,setNewSurname]=useState("");
+  const[nextSession,setNextSession]=useState(meta?.nextSessionAt?meta.nextSessionAt.slice(0,16):"");
   const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
   const add=()=>{
     if(!newFirst.trim()||!newSurname.trim())return;
-    const full=`${newFirst.trim()} ${newSurname.trim()}`;
-    setS(p=>({...p,whitelist:[...p.whitelist,full]}));
+    setWl(p=>[...p,`${newFirst.trim()} ${newSurname.trim()}`]);
     setNewFirst("");setNewSurname("");
   };
-  const rem=name=>setS(p=>({...p,whitelist:p.whitelist.filter(x=>x!==name)}));
-  const doSave=async()=>{setSaving(true);await onSave(s);setSaving(false);setToast("Settings saved ✓");};
+  const rem=name=>setWl(p=>p.filter(x=>x!==name));
+  const doSave=async()=>{setSaving(true);await onSaveWhitelist(wl);setSaving(false);setToast("Whitelist saved ✓");};
+  const saveSession=async()=>{setSaving(true);await onSetNextSession(nextSession?new Date(nextSession).toISOString():null);setSaving(false);setToast("Next session saved ✓");};
+  const state=accessState(meta);
+  const requests=Object.entries(extensionRequests||{});
   return(<div style={{padding:14,paddingBottom:80}}>
     {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
-    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:14}}>Course Settings</div>
-    <MigrationPanel legacyStudents={legacyStudents} onDone={onMigrated}/>
+    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:14}}>Batch Settings — {meta?.name}</div>
+
+    {requests.length>0&&<div style={{background:"#FBEDED",borderRadius:12,padding:"12px 14px",marginBottom:14}}>
+      <div style={{fontSize:12.5,fontWeight:600,color:"#a55",marginBottom:8}}>Access requests</div>
+      {requests.map(([uid,r])=>(<div key={uid} style={{marginBottom:8}}>
+        <div style={{fontSize:13,color:B.adminDark,fontWeight:600}}>{r.name}</div>
+        <div style={{fontSize:12,color:B.purple,marginBottom:6}}>{r.note}</div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={()=>onResolveExtension(uid,true)} style={{padding:"6px 12px",borderRadius:7,border:"none",background:B.green,color:"white",fontSize:11.5,cursor:"pointer"}}>Grant {EXTENSION_GRANT_DAYS} more days</button>
+          <button onClick={()=>onResolveExtension(uid,false)} style={{padding:"6px 12px",borderRadius:7,border:`1px solid ${B.sage}`,background:"white",color:B.adminDark,fontSize:11.5,cursor:"pointer"}}>Decline</button>
+        </div>
+      </div>))}
+    </div>}
+
     <div style={{background:"white",borderRadius:12,padding:"14px 15px",marginBottom:14,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
-        <div><div style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Course Registration</div>
-          <div style={{fontSize:11,color:B.purple,marginTop:2}}>{s.courseLocked?"Locked — no new students can join":"Open — new students can register"}</div></div>
-        <button onClick={()=>setS(p=>({...p,courseLocked:!p.courseLocked}))} style={{padding:"8px 16px",borderRadius:10,background:s.courseLocked?B.red:B.green,color:"white",border:"none",fontSize:12,fontWeight:600,cursor:"pointer"}}>{s.courseLocked?"Unlock":"Lock"}</button>
+        <div><div style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Course Status</div>
+          <div style={{fontSize:11,color:B.purple,marginTop:2}}>{state==="active"?"Active — students are progressing through lessons":state==="window"?`Complete — ${daysLeft(meta)} days left in access window`:"Locked — access window has closed"}</div></div>
+        {state==="active"&&<button onClick={()=>onMarkComplete()} style={{padding:"8px 14px",borderRadius:10,background:B.green,color:"white",border:"none",fontSize:12,fontWeight:600,cursor:"pointer"}}>Mark Complete</button>}
       </div>
-      <div style={{fontSize:11,color:B.sage,fontStyle:"italic"}}>Lock the course once all students have registered.</div>
+      <div style={{fontSize:11,color:B.sage,fontStyle:"italic"}}>Marking complete starts the {meta?.windowDays||DEFAULT_WINDOW_DAYS}-day access window for every student in this batch.</div>
     </div>
+
+    <div style={{background:"white",borderRadius:12,padding:"14px 15px",marginBottom:14,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      <div style={{fontWeight:600,fontSize:14,color:B.adminDark,marginBottom:8}}>Next Online Session</div>
+      <input type="datetime-local" value={nextSession} onChange={e=>setNextSession(e.target.value)} style={{width:"100%",padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",marginBottom:8}}/>
+      <button onClick={saveSession} disabled={saving} style={{width:"100%",padding:"9px",borderRadius:9,background:B.adminDark,color:"white",border:"none",fontSize:12.5,cursor:"pointer"}}>Save</button>
+    </div>
+
     <div style={{background:"white",borderRadius:12,padding:"14px 15px",boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
-      <div style={{fontWeight:600,fontSize:14,color:B.adminDark,marginBottom:4}}>Approved Students ({s.whitelist.length})</div>
+      <div style={{fontWeight:600,fontSize:14,color:B.adminDark,marginBottom:4}}>Approved Students ({wl.length})</div>
       <div style={{fontSize:11,color:B.purple,marginBottom:12}}>First name and surname must match exactly how students enter them.</div>
       <div style={{display:"flex",gap:7,marginBottom:7}}>
         <input value={newFirst} onChange={e=>setNewFirst(e.target.value)} placeholder="First name…" style={{flex:1,padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",outline:"none"}}/>
         <input value={newSurname} onChange={e=>setNewSurname(e.target.value)} onKeyDown={e=>e.key==="Enter"&&add()} placeholder="Surname…" style={{flex:1,padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",outline:"none"}}/>
       </div>
       <button onClick={add} style={{width:"100%",padding:"9px 14px",borderRadius:9,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer",marginBottom:12}}>+ Add Student</button>
-      {s.whitelist.map(name=>(<div key={name} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 11px",background:"#f7f5f2",borderRadius:9,marginBottom:6}}>
+      {wl.map(name=>(<div key={name} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"9px 11px",background:"#f7f5f2",borderRadius:9,marginBottom:6}}>
         <span style={{fontFamily:"'EB Garamond',serif",fontSize:15,color:B.adminDark}}>{name}</span>
         <button onClick={()=>rem(name)} style={{background:"none",border:"none",color:B.red,cursor:"pointer",fontSize:15}}>✕</button>
       </div>))}
-      {s.whitelist.length===0&&<p style={{color:B.sage,fontSize:13,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No students added yet.</p>}
+      {wl.length===0&&<p style={{color:B.sage,fontSize:13,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No students added yet.</p>}
     </div>
-    <button onClick={doSave} disabled={saving} style={{width:"100%",marginTop:16,padding:"13px",borderRadius:12,background:saving?"#888":B.adminDark,color:"white",border:"none",fontSize:13,fontWeight:500,cursor:"pointer",letterSpacing:0.5}}>{saving?"Saving…":"Save Settings"}</button>
+    <button onClick={doSave} disabled={saving} style={{width:"100%",marginTop:16,padding:"13px",borderRadius:12,background:saving?"#888":B.adminDark,color:"white",border:"none",fontSize:13,fontWeight:500,cursor:"pointer",letterSpacing:0.5}}>{saving?"Saving…":"Save Whitelist"}</button>
+  </div>);
+};
+
+// ── RECAP EDITOR ──
+const RecapEditor=({recap,onSave})=>{
+  const[items,setItems]=useState(recap?.items||[]);
+  const[released,setReleased]=useState(!!recap?.released);
+  const[q,setQ]=useState("");const[a,setA]=useState("");
+  const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
+  const addItem=()=>{if(!q.trim()||!a.trim())return;setItems(p=>[...p,{q:q.trim(),a:a.trim()}]);setQ("");setA("");};
+  const remItem=i=>setItems(p=>p.filter((_,idx)=>idx!==i));
+  const save=async(publish)=>{setSaving(true);await onSave({items,released:publish!==undefined?publish:released});setSaving(false);setReleased(publish!==undefined?publish:released);setToast(publish?"Published to students ✓":"Saved ✓");};
+  return(<div style={{padding:14,paddingBottom:80}}>
+    {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:4}}>Training Lessons Recap</div>
+    <div style={{fontSize:11.5,color:B.purple,marginBottom:14}}>{items.length} question{items.length!==1?"s":""} · {released?"Published to students":"Not yet published"}</div>
+    <div style={{background:"white",borderRadius:12,padding:"14px 15px",marginBottom:14,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      <textarea value={q} onChange={e=>setQ(e.target.value)} placeholder="Question…" style={{width:"100%",minHeight:50,padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",marginBottom:8,boxSizing:"border-box",resize:"vertical"}}/>
+      <textarea value={a} onChange={e=>setA(e.target.value)} placeholder="Answer…" style={{width:"100%",minHeight:70,padding:"9px 10px",borderRadius:9,border:`1.5px solid #C5BBCE`,fontSize:13,fontFamily:"'EB Garamond',serif",marginBottom:8,boxSizing:"border-box",resize:"vertical"}}/>
+      <button onClick={addItem} style={{width:"100%",padding:"9px",borderRadius:9,background:B.adminDark,color:"white",border:"none",fontSize:12.5,cursor:"pointer"}}>+ Add Question</button>
+    </div>
+    {items.map((it,i)=>(<div key={i} style={{background:"white",borderRadius:10,padding:"11px 13px",marginBottom:8,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",gap:8}}>
+        <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600,color:B.adminDark,marginBottom:3}}>{i+1}. {it.q}</div><div style={{fontSize:12,color:B.purple}}>{it.a}</div></div>
+        <button onClick={()=>remItem(i)} style={{background:"none",border:"none",color:B.red,cursor:"pointer",fontSize:15,flexShrink:0}}>✕</button>
+      </div>
+    </div>))}
+    <div style={{display:"flex",gap:10,marginTop:14}}>
+      <button onClick={()=>save(false)} disabled={saving} style={{flex:1,padding:"12px",borderRadius:10,background:"white",border:`1px solid ${B.sage}`,color:B.adminDark,fontSize:13,cursor:"pointer"}}>Save Draft</button>
+      <button onClick={()=>save(true)} disabled={saving} style={{flex:1,padding:"12px",borderRadius:10,background:B.green,border:"none",color:"white",fontSize:13,fontWeight:600,cursor:"pointer"}}>Publish to Students</button>
+    </div>
   </div>);
 };
 
@@ -433,6 +559,7 @@ const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
   const released=lessons.filter(l=>l.readingReleased);
   const students=[...new Set(responses.map(r=>r.studentName))].sort();
   const list=by==="lesson"?responses.filter(r=>r.lessonId===selL):responses.filter(r=>r.studentName===selS);
+  const selLesson=selL?lessons.find(l=>l.id===selL):null;
   return(<div style={{padding:14,paddingBottom:80}}>
     <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:12}}>Responses</div>
     <div style={{display:"flex",background:"white",borderRadius:10,padding:3,marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.07)"}}>
@@ -447,6 +574,7 @@ const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
     {list.map((r,i)=>{
       const l=lessons.find(x=>x.id===r.lessonId);
       const hasFb=feedback.some(f=>f.lessonId===r.lessonId&&f.studentName===r.studentName);
+      const status=l?completionStatus(l,r):"on-time";
       return(<div key={i} onClick={()=>onOpen(r)} style={{background:"white",borderRadius:12,padding:"12px 13px",marginBottom:8,boxShadow:"0 2px 8px rgba(44,31,58,0.06)",cursor:"pointer"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
           <div style={{fontFamily:"'EB Garamond',serif",fontSize:16,fontWeight:600,color:B.adminDark}}>{by==="lesson"?r.studentName:`Lesson ${r.lessonId} — ${l?.title||""}`}</div>
@@ -456,6 +584,7 @@ const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
           </div>
         </div>
         <div style={{fontSize:9.5,color:B.purple,marginBottom:5}}>{fmtDT(r.submittedAt)}</div>
+        <div style={{marginBottom:5}}><StatusPill status={status}/></div>
         {r.reflections?.[0]&&<div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.sage,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{r.reflections[0]}"</div>}
       </div>);
     })}
@@ -509,14 +638,14 @@ const FeedbackWriter=({lesson,response,existingFb,onBack})=>{
 };
 
 // ── STUDENT PROGRESS ──
-const ProgressTab=({lessons,responses,settings})=>{
+const ProgressTab=({lessons,responses,whitelist})=>{
   const[exp,setExp]=useState(null);
   const rel=lessons.filter(l=>l.readingReleased).length;
-  const students=settings.whitelist||[];
+  const students=whitelist||[];
   const Circle=({f})=>(<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill={f?"#A39C0F":"none"} stroke={f?"#A39C0F":"#C5BBCE"} strokeWidth="1.5"/></svg>);
   return(<div style={{padding:14,paddingBottom:80}}>
     <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark,marginBottom:4}}>Student Progress</div>
-    <div style={{fontSize:9.5,color:B.purple,marginBottom:12}}>{students.length} students · {rel} of 20 lessons released</div>
+    <div style={{fontSize:9.5,color:B.purple,marginBottom:12}}>{students.length} students · {rel} of {lessons.length} lessons released</div>
     <div style={{background:"white",borderRadius:12,padding:"11px 13px",marginBottom:12,display:"flex",justifyContent:"space-around",boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
       {[{n:students.length,l:"Students",c:B.adminDark},{n:students.filter(s=>responses.filter(r=>r.studentName===s).length>=rel).length,l:"On Track",c:B.green},{n:students.filter(s=>{const c=responses.filter(r=>r.studentName===s).length;return c<rel&&c>0;}).length,l:"Pending",c:B.gold},{n:students.filter(s=>responses.filter(r=>r.studentName===s).length===0&&rel>0).length,l:"Behind",c:B.red}].map(s=>(<div key={s.l} style={{textAlign:"center"}}>
         <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:600,color:s.c,lineHeight:1}}>{s.n}</div>
@@ -529,20 +658,19 @@ const ProgressTab=({lessons,responses,settings})=>{
         <span style={{fontSize:9,color:B.purple}}>{x.l}</span>
       </div>))}
     </div>
-    <div style={{background:"white",borderRadius:10,padding:"9px 13px",marginBottom:12,textAlign:"center",boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
-      <div style={{fontSize:8.5,fontWeight:700,letterSpacing:2,textTransform:"uppercase",color:B.purple}}>Each lesson tracks 3 steps</div>
-    </div>
     {students.length===0&&<p style={{color:B.purple,fontSize:14,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No students registered yet.</p>}
     {students.map(name=>{
       const sub=responses.filter(r=>r.studentName===name);
       const done=sub.length;const avg=sub.length?Math.round((sub.reduce((a,r)=>a+(r.score||0),0)/sub.length)*10)/10:null;
       const pct=rel>0?Math.round((done/rel)*100):0;const isExp=exp===name;
-      const prog=lessons.map(l=>{const r=sub.find(x=>x.lessonId===l.id);return{reading:l.readingReleased,summary:l.summaryReleased,quiz:!!r};});
+      const streak=computeStreak(lessons,sub);
+      const prog=lessons.map(l=>{const r=sub.find(x=>x.lessonId===l.id);return{reading:l.readingReleased,summary:l.summaryReleased,quiz:!!r,status:completionStatus(l,r)};});
       return(<div key={name} style={{background:"white",borderRadius:13,marginBottom:9,boxShadow:"0 2px 8px rgba(44,31,58,0.06)",overflow:"hidden"}}>
         <div onClick={()=>setExp(isExp?null:name)} style={{padding:"12px 13px",cursor:"pointer"}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
             <div style={{fontFamily:"'EB Garamond',serif",fontSize:16,fontWeight:600,color:B.adminDark}}>{name}</div>
             <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {streak>0&&<span style={{background:"#F5F4E1",color:B.green,borderRadius:8,padding:"2px 8px",fontSize:9.5,fontWeight:600}}>🔥 {streak}</span>}
               {avg&&<span style={{background:"#fdf3d0",color:"#8a6800",borderRadius:8,padding:"2px 8px",fontSize:9.5,fontWeight:600}}>Avg {avg}/10</span>}
               <span style={{color:"#C5BBCE",fontSize:13,display:"inline-block",transform:isExp?"rotate(90deg)":"none",transition:"transform 0.2s"}}>›</span>
             </div>
@@ -551,7 +679,7 @@ const ProgressTab=({lessons,responses,settings})=>{
           <div style={{fontSize:9,color:B.purple}}>{done} / {rel} lessons · quiz submitted</div>
         </div>
         {isExp&&<div style={{padding:"0 13px 12px",borderTop:"1px solid #f0ede8"}}>
-          <div style={{fontSize:8.5,letterSpacing:2,textTransform:"uppercase",color:B.purple,fontWeight:600,padding:"9px 0 7px",textAlign:"center"}}>Lesson by Lesson — All 20</div>
+          <div style={{fontSize:8.5,letterSpacing:2,textTransform:"uppercase",color:B.purple,fontWeight:600,padding:"9px 0 7px",textAlign:"center"}}>Lesson by Lesson — All {lessons.length}</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:5,justifyContent:"center"}}>
             {prog.map((p,i)=>(<div key={i} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
               <div style={{fontSize:7.5,color:"#8A7099"}}>{`L${i+1}`}</div>
@@ -565,19 +693,21 @@ const ProgressTab=({lessons,responses,settings})=>{
 };
 
 // ── ADMIN DASHBOARD ──
-const AdminDashboard=({lessons,responses,feedback,settings,legacyStudents,onSaveLesson,onSaveSettings,onRefresh,onMigrated})=>{
+const AdminDashboard=({batchId,batchMeta,lessons,responses,feedback,whitelist,recap,extensionRequests,onSaveLesson,onSaveWhitelist,onMarkComplete,onSetNextSession,onResolveExtension,onSaveRecap,onRefresh,onBackToBatches})=>{
   const[tab,setTab]=useState("lessons");const[editing,setEditing]=useState(null);const[openResp,setOpenResp]=useState(null);
   if(editing){const cur=lessons.find(l=>l.id===editing.id)||editing;return<LessonEdit lesson={cur} onSave={async upd=>{const ok=await onSaveLesson(upd);setEditing(upd);return ok;}} onBack={()=>{setEditing(null);onRefresh();}}/>;}
   if(openResp){const l=lessons.find(x=>x.id===openResp.lessonId);const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);return<FeedbackWriter lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}}/>;}
-  const adminTabs=[{id:"lessons",label:"Lessons",icon:<IBook/>},{id:"responses",label:"Responses",icon:<IDoc/>},{id:"progress",label:"Student Progress",icon:<IPeople/>}];
+  const requestCount=Object.keys(extensionRequests||{}).length;
+  const adminTabs=[{id:"lessons",label:"Lessons",icon:<IBook/>},{id:"responses",label:"Responses",icon:<IDoc/>},{id:"progress",label:"Progress",icon:<IPeople/>}];
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
-    <AppHeader bg={B.adminDark} admin sub={COURSE_NAME}/>
+    <AppHeader bg={B.adminDark} admin sub={`${batchMeta?.name||""}`} onBack={onBackToBatches}/>
     <div style={{flex:1,overflow:"auto"}}>
       {tab==="lessons"&&<div style={{padding:14,paddingBottom:80}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
           <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:500,color:B.adminDark}}>All Lessons</div>
           <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setTab("settings")} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>⚙ Settings</button>
+            <button onClick={()=>setTab("recap")} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>Recap</button>
+            <button onClick={()=>setTab("settings")} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:requestCount>0?"#FBEDED":"white",color:requestCount>0?"#a55":B.purple,fontSize:11,cursor:"pointer"}}>⚙ Settings{requestCount>0?` (${requestCount})`:""}</button>
             <button onClick={onRefresh} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>↻</button>
           </div>
         </div>
@@ -587,7 +717,7 @@ const AdminDashboard=({lessons,responses,feedback,settings,legacyStudents,onSave
             {ls.map(l=>(<div key={l.id} onClick={()=>setEditing(l)} style={{background:"white",borderRadius:12,padding:"12px 14px",marginBottom:8,display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",boxShadow:"0 2px 8px rgba(44,31,58,0.07)"}}>
               <div style={{flex:1,minWidth:0,marginRight:10}}>
                 <div style={{fontWeight:600,fontSize:15,color:B.adminDark,fontFamily:"'EB Garamond',serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.lessonNumber}. {l.title}</div>
-                <div style={{fontSize:10,color:B.purple,marginTop:2}}>{l.readingReleased?`Released ${l.readingReleaseDate||""}`:l.readingScheduledDate?`Scheduled ${fmtDate(l.readingScheduledDate)}`:"Not yet scheduled"}</div>
+                <div style={{fontSize:10,color:B.purple,marginTop:2}}>{l.readingReleased?`Released ${l.readingReleaseDate||""}`:l.readingScheduledDate?`Scheduled ${fmtDate(l.readingScheduledDate)}`:"Not yet scheduled"}{l.dueAt?` · Due ${fmtDT(l.dueAt)}`:""}</div>
               </div>
               <div style={{display:"flex",alignItems:"center",gap:8}}><Badge status={lessonStatus(l)}/><span style={{color:"#C5BBCE",fontSize:14}}>›</span></div>
             </div>))}
@@ -595,10 +725,11 @@ const AdminDashboard=({lessons,responses,feedback,settings,legacyStudents,onSave
         })}
       </div>}
       {tab==="responses"&&<ResponsesTab lessons={lessons} responses={responses} feedback={feedback} onOpen={r=>setOpenResp(r)}/>}
-      {tab==="progress"&&<ProgressTab lessons={lessons} responses={responses} settings={settings}/>}
-      {tab==="settings"&&<AdminSettings settings={settings} legacyStudents={legacyStudents} onMigrated={onMigrated} onSave={async s=>{await onSaveSettings(s);setTab("lessons");}}/>}
+      {tab==="progress"&&<ProgressTab lessons={lessons} responses={responses} whitelist={whitelist}/>}
+      {tab==="recap"&&<><button onClick={()=>setTab("lessons")} style={{margin:"14px 0 0 14px",padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>← Lessons</button><RecapEditor recap={recap} onSave={onSaveRecap}/></>}
+      {tab==="settings"&&<><button onClick={()=>setTab("lessons")} style={{margin:"14px 0 0 14px",padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>← Lessons</button><AdminSettings batchId={batchId} meta={batchMeta} whitelist={whitelist} extensionRequests={extensionRequests} onSaveWhitelist={onSaveWhitelist} onMarkComplete={onMarkComplete} onSetNextSession={onSetNextSession} onResolveExtension={onResolveExtension}/></>}
     </div>
-    {tab!=="settings"&&<BottomNav tabs={adminTabs} active={tab} onSelect={setTab} bg={B.adminDark} ac={B.gold}/>}
+    {tab!=="settings"&&tab!=="recap"&&<BottomNav tabs={adminTabs} active={tab} onSelect={setTab} bg={B.adminDark} ac={B.gold}/>}
   </div>);
 };
 
@@ -684,17 +815,146 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
 };
 
 // ── STUDENT DASHBOARD ──
-const StudentDashboard=({studentName,lessons,responses,feedback,onSubmitQuiz})=>{
+// Reminder banner logic — driven by real data (due dates, next session), not a fixed calendar.
+const ReminderBanner=({latest,myResp,batchMeta})=>{
+  const submitted=latest?myResp.some(r=>r.lessonId===latest.id):false;
+  const dueAt=latest?.dueAt?new Date(latest.dueAt):null;
+  const hoursLeft=dueAt?(dueAt.getTime()-Date.now())/3600000:null;
+  let state=null;
+  if(latest&&!submitted&&hoursLeft!==null&&hoursLeft<=24&&hoursLeft>-100000){
+    state={Icon:IconQuizDue,color:"#C97B7B",bg:"#FBEDED",title:"Submit your quiz tonight",body:"Submit your quiz and reflection before the deadline to keep your streak going."};
+  }else if(latest&&!submitted&&latest.readingReleaseDate){
+    const releasedRecently=(Date.now()-new Date(latest.readingReleaseDate.split(" ").length>1?latest.readingReleaseDate:Date.now()).getTime())<86400000;
+    state=releasedRecently?
+      {Icon:IconNotebook,color:B.purple,bg:"#F6EFF3",title:"Today Session's materials are up",body:"Lesson notes, quiz, and reflection questions are ready whenever you are."}:
+      {Icon:IconNotebook,color:B.gold,bg:"#FBF3DC",title:"Time to read",body:"Take a little time this week to sit with the reading before the quiz is due."};
+  }else if(batchMeta?.nextSessionAt){
+    const d=new Date(batchMeta.nextSessionAt);
+    state={Icon:IconOnlineSession,color:B.green,bg:"#F5F4E1",title:`Next online session: ${fmtDT(batchMeta.nextSessionAt)}`,body:"This week's pre-reading is now available — a gentle place to begin before we meet."};
+  }
+  if(!state)return null;
+  const{Icon}=state;
+  return(<div style={{background:state.bg,borderRadius:14,padding:"14px 15px",display:"flex",gap:12,margin:"14px 14px 0",alignItems:"flex-start"}}>
+    <div style={{width:38,height:38,borderRadius:"50%",background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><Icon color="white" size={18}/></div>
+    <div style={{flex:1}}><div style={{fontSize:13.5,fontWeight:600,color:B.darkPurple,marginBottom:2,fontFamily:"'EB Garamond',serif"}}>{state.title}</div><div style={{fontSize:11.5,color:B.purple,lineHeight:1.5}}>{state.body}</div></div>
+  </div>);
+};
+
+const StreakCard=({streak})=>(
+  <div style={{display:"flex",alignItems:"center",gap:12,margin:"14px 14px 0",background:streak>0?"#FBF3DC":"#F5F4E1",border:`1px solid ${streak>0?"#E4CB84":"#D9D48A"}`,borderRadius:14,padding:"12px 15px"}}>
+    <div style={{width:44,height:44,borderRadius:"50%",background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}><IconSprout color="white" size={24}/></div>
+    <div><div style={{fontSize:16,fontWeight:600,color:B.darkPurple,fontFamily:"'EB Garamond',serif"}}>{streak>0?`${streak} week${streak!==1?"s":""} in a row`:"Beginning again"}</div><div style={{fontSize:11,color:B.purple}}>{streak>0?"Keep going — submit on time to continue.":"Complete a lesson on time to start your streak."}</div></div>
+  </div>
+);
+
+const JourneyTimeline=({lessons,myResp,onOpen})=>{
+  const released=lessons.filter(l=>l.readingReleased).sort((a,b)=>a.lessonNumber-b.lessonNumber);
+  if(released.length===0)return<p style={{color:B.purple,fontSize:15,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No lessons released yet.</p>;
+  return(<div>
+    {released.map((l,i)=>{
+      const resp=myResp.find(r=>r.lessonId===l.id);
+      const status=completionStatus(l,resp);
+      const s=STATUS_STYLE[status];
+      return(<div key={l.id} style={{display:"flex",gap:14}}>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"center"}}>
+          <div onClick={()=>onOpen(l)} style={{width:38,height:38,borderRadius:"50%",background:resp?B.purple:"white",border:`2px solid ${resp?B.purple:"#D8D0DE"}`,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",flexShrink:0}}>
+            {resp?<IconCheck color="white" size={15}/>:<span style={{fontSize:12,color:B.purple,fontWeight:600}}>{l.lessonNumber}</span>}
+          </div>
+          {i<released.length-1&&<div style={{width:2,flex:1,background:"#E4DEE9",minHeight:22}}/>}
+        </div>
+        <div style={{paddingBottom:22,paddingTop:4,cursor:"pointer"}} onClick={()=>onOpen(l)}>
+          <div style={{fontSize:14,color:B.darkPurple,fontWeight:600,fontFamily:"'EB Garamond',serif"}}>{l.lessonNumber}. {l.title}</div>
+          <div style={{marginTop:4}}><StatusPill status={status}/></div>
+        </div>
+      </div>);
+    })}
+  </div>);
+};
+
+const JournalTab=({lessons,journal,onSave})=>{
+  const released=lessons.filter(l=>l.readingReleased).sort((a,b)=>a.lessonNumber-b.lessonNumber);
+  const[selected,setSelected]=useState(released[0]?.id||null);
+  const draft=journal[selected]||{text:"",images:[]};
+  const[text,setText]=useState(draft.text||"");
+  const[saved,setSaved]=useState(false);
+  useEffect(()=>{setText((journal[selected]||{}).text||"");setSaved(false);},[selected]);
+  if(released.length===0)return<p style={{color:B.purple,fontSize:15,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>Your journal will open once your first lesson is released.</p>;
+  const save=async()=>{await onSave(selected,{...draft,text});setSaved(true);setTimeout(()=>setSaved(false),1800);};
+  return(<div>
+    <div style={{background:"#F8F4EF",borderRadius:12,padding:"13px 15px",marginBottom:14,fontSize:12,color:B.purple,lineHeight:1.6}}>
+      This is your private page for your own reflections and collections from the training. Reflect on your own thoughts about each lesson - no one, not even your teacher, can see what you write here. Think of it as your personal journal, kept safe for your own future reflection.
+    </div>
+    <div style={{display:"flex",gap:12}}>
+      <div style={{width:110,flexShrink:0}}>
+        {released.map(l=>(<div key={l.id} onClick={()=>setSelected(l.id)} style={{padding:"9px 10px",borderRadius:8,cursor:"pointer",background:selected===l.id?"#F1EAF0":"transparent",marginBottom:2}}>
+          <div style={{fontSize:11.5,color:B.darkPurple,fontWeight:selected===l.id?600:400}}>Lesson {l.lessonNumber}</div>
+          <div style={{fontSize:9.5,color:B.purple}}>{journal[l.id]?.text?"Written":"Empty"}</div>
+        </div>))}
+      </div>
+      <div style={{flex:1}}>
+        <textarea value={text} onChange={e=>setText(e.target.value)} placeholder="Write whatever this lesson brought up for you…" style={{width:"100%",minHeight:160,border:`1px solid ${B.sage}`,borderRadius:10,padding:"11px 13px",fontFamily:"'EB Garamond',serif",fontSize:14,color:B.darkPurple,resize:"vertical",boxSizing:"border-box",outline:"none"}}/>
+        <button onClick={save} style={{marginTop:8,padding:"9px 18px",borderRadius:8,border:"none",background:B.sage,color:"white",fontSize:12.5,fontWeight:600,cursor:"pointer"}}>{saved?"Saved ✓":"Save"}</button>
+      </div>
+    </div>
+  </div>);
+};
+
+const RecapTab=({recap})=>{
+  if(!recap||!recap.released)return<p style={{color:B.purple,fontSize:15,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>Your teacher will publish this after your final session.</p>;
+  const items=recap.items||[];
+  const printPdf=()=>{
+    const w=window.open("","_blank");
+    const rows=items.map((it,i)=>`<div style="margin-bottom:16px"><div style="font-weight:600;color:#5B4969;margin-bottom:4px">${i+1}. ${it.q}</div><div style="color:#333">${it.a}</div></div>`).join("");
+    w.document.write(`<html><head><title>Training Lessons Recap</title></head><body style="font-family:Georgia,serif;padding:40px;max-width:700px;margin:0 auto"><div style="text-align:center;margin-bottom:30px"><div style="font-weight:600;font-size:18px;color:#5B4969">Yoga Vana Forest Academy</div><div style="font-size:13px;color:#5B4969">${COURSE_NAME}</div><div style="font-size:13px;color:#8A7099;font-style:italic;margin-top:6px">Training Lessons Recap</div></div>${rows}</body></html>`);
+    w.document.close();w.print();
+  };
+  return(<div>
+    <div style={{fontFamily:"'EB Garamond',serif",fontSize:20,fontWeight:600,color:B.darkPurple,marginBottom:4}}>Training Lessons Recap</div>
+    <div style={{fontSize:12,color:B.purple,lineHeight:1.6,marginBottom:14}}>Published after your final session - a set of key questions and answers gathered from across the training, to help you prepare for the written examination.</div>
+    <button onClick={printPdf} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:8,padding:"12px",borderRadius:10,background:B.green,border:"none",color:"white",fontSize:13.5,fontWeight:600,cursor:"pointer",marginBottom:18}}><IconDownload color="white" size={15}/>Download as PDF</button>
+    {items.map((it,i)=>(<div key={i} style={{paddingBottom:14,marginBottom:14,borderBottom:i<items.length-1?`1px solid ${B.linen}`:"none"}}>
+      <div style={{fontSize:14,color:B.darkPurple,fontWeight:600,marginBottom:5,fontFamily:"'EB Garamond',serif"}}>{i+1}. {it.q}</div>
+      <div style={{fontSize:13,color:"#5b4d63",lineHeight:1.6}}>{it.a}</div>
+    </div>))}
+  </div>);
+};
+
+const BadgePopup=({onClose})=>(
+  <div style={{position:"fixed",inset:0,background:"rgba(44,31,58,0.4)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:9999}} onClick={onClose}>
+    <div style={{background:"white",borderRadius:18,padding:"28px 30px",textAlign:"center",boxShadow:"0 12px 40px rgba(91,73,105,0.3)"}}>
+      <div style={{width:64,height:64,borderRadius:"50%",background:B.purple,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}><IconGradCap color="white" size={30}/></div>
+      <div style={{fontSize:16,fontWeight:600,color:B.darkPurple,fontFamily:"'EB Garamond',serif"}}>Milestone reached</div>
+      <div style={{fontSize:13.5,color:B.purple,marginTop:3}}>Course Complete</div>
+    </div>
+  </div>
+);
+
+const AccessWindowNotice=({batchMeta})=>{
+  const state=accessState(batchMeta);
+  if(state!=="window")return null;
+  const d=daysLeft(batchMeta);
+  return(<div style={{margin:"14px 14px 0",background:"#F5F4E1",border:"1px solid #D9D48A",borderRadius:12,padding:"11px 14px",fontSize:12,color:B.darkPurple}}>
+    Course complete — you have <b>{d} day{d!==1?"s":""}</b> left to download your journal and lessons before this batch's login closes.
+  </div>);
+};
+
+const StudentDashboard=({studentName,lessons,responses,feedback,journal,badges,recap,batchMeta,onSubmitQuiz,onSaveJournal,newBadge,onDismissBadge})=>{
   const[tab,setTab]=useState("week");const[open,setOpen]=useState(null);const[reflL,setReflL]=useState(null);
   const released=lessons.filter(l=>l.readingReleased).sort((a,b)=>a.lessonNumber-b.lessonNumber);
   const latest=released[released.length-1]||null;const relCount=released.length;
   const myResp=responses.filter(r=>r.studentName===studentName);const done=myResp.length;
-  const navTabs=[{id:"week",label:"This Week",icon:<IBook/>},{id:"bank",label:"All Lessons",icon:<IFan/>},{id:"reflections",label:"My Reflections",icon:<IHeart/>}];
+  const streak=computeStreak(lessons,myResp);
+  const navTabs=[{id:"week",label:"This Week",icon:<IBook/>},{id:"bank",label:"Journey",icon:<IFan/>},{id:"journal",label:"Journal",icon:<IHeart/>},{id:"reflections",label:"Scores",icon:<IBook/>}];
+  if(recap?.released)navTabs.push({id:"recap",label:"Recap",icon:<IFan/>});
   if(open)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}><AppHeader sub={open.title} onBack={()=>setOpen(null)}/><div style={{flex:1,overflow:"auto"}}><LessonView lesson={open} studentName={studentName} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz} readOnly/></div></div>);
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
     <AppHeader sub={`${COURSE_NAME} · ${studentName}`}/>
+    {newBadge&&<BadgePopup onClose={onDismissBadge}/>}
+    <AccessWindowNotice batchMeta={batchMeta}/>
     <div style={{flex:1,overflow:"auto",paddingBottom:64}}>
       {tab==="week"&&(latest?(<>
+        <ReminderBanner latest={latest} myResp={myResp} batchMeta={batchMeta}/>
+        <StreakCard streak={streak}/>
         <div style={{background:`linear-gradient(135deg,${B.darkPurple},#7B6B8A)`,margin:"14px 14px 0",borderRadius:16,padding:"14px 16px 12px"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
             <div><div style={{fontFamily:"'EB Garamond',serif",fontSize:19,fontWeight:500,color:"white",lineHeight:1.2,marginBottom:2}}><span style={{fontStyle:"italic"}}>Namaste,</span> <span style={{fontStyle:"normal"}}>{studentName.split(" ")[0]}</span></div><div style={{fontSize:10,color:"rgba(255,255,255,0.5)"}}>Keep going — you're doing well</div></div>
@@ -708,15 +968,15 @@ const StudentDashboard=({studentName,lessons,responses,feedback,onSubmitQuiz})=>
         <LessonView lesson={latest} studentName={studentName} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz}/>
       </>):<div style={{padding:"60px 24px",textAlign:"center"}}><div style={{display:"flex",justifyContent:"center",marginBottom:20}}><LotusImg size={52} float/></div><p style={{color:B.purple,fontFamily:"'EB Garamond',serif",fontSize:20,lineHeight:1.6,fontStyle:"italic"}}>Your first lesson will be available soon.</p></div>)}
       {tab==="bank"&&<div style={{padding:14}}>
-        <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.darkPurple,marginBottom:4}}>Previous Lessons</div>
-        <div style={{fontSize:9.5,color:B.purple,marginBottom:14}}>{released.length} released</div>
-        {released.length===0?<p style={{color:B.purple,fontSize:15,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No lessons released yet.</p>:released.map(l=>{const isDone=myResp.some(r=>r.lessonId===l.id);return(<div key={l.id} onClick={()=>setOpen(l)} style={{background:"white",borderRadius:12,padding:"13px 15px",marginBottom:9,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.07)"}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <div style={{flex:1,minWidth:0,marginRight:10}}><div style={{fontFamily:"'EB Garamond',serif",fontSize:17,color:B.darkPurple,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{l.lessonNumber}. {l.title}</div><div style={{fontSize:10,color:B.sage,marginTop:3}}>{l.readingReleaseDate||""}{l.summaryReleased?" · Summary available":" · Reading only"}</div></div>
-            <span style={{background:isDone?"#ede9f2":"#f0ede8",borderRadius:9,padding:"3px 9px",fontSize:9,fontWeight:600,color:isDone?B.gold:"#b5adc0",whiteSpace:"nowrap"}}>{isDone?"Quiz Done ✓":"Quiz Pending"}</span>
-          </div>
-        </div>);})}
+        <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.darkPurple,marginBottom:4}}>Your Journey</div>
+        <div style={{fontSize:9.5,color:B.purple,marginBottom:14}}>{released.length} lesson{released.length!==1?"s":""} so far</div>
+        <JourneyTimeline lessons={lessons} myResp={myResp} onOpen={setOpen}/>
       </div>}
+      {tab==="journal"&&<div style={{padding:14}}>
+        <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.darkPurple,marginBottom:14}}>My Journal</div>
+        <JournalTab lessons={lessons} journal={journal} onSave={onSaveJournal}/>
+      </div>}
+      {tab==="recap"&&<div style={{padding:14}}><RecapTab recap={recap}/></div>}
       {tab==="reflections"&&<div style={{padding:14}}>
         <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.darkPurple,marginBottom:14}}>My Reflections</div>
         <select value={reflL||""} onChange={e=>setReflL(Number(e.target.value)||null)} style={{width:"100%",padding:"11px 13px",borderRadius:11,border:`1.5px solid #C5BBCE`,fontSize:14,fontFamily:"'EB Garamond',serif",color:B.darkPurple,background:"white",marginBottom:14}}>
@@ -774,45 +1034,70 @@ const StudentDashboard=({studentName,lessons,responses,feedback,onSubmitQuiz})=>
 };
 
 // ── WELCOME + PIN ──
-const WelcomeScreen=({settings,onEnter})=>{
+const WelcomeScreen=({batchIndex,activeBatchId,onEnter})=>{
   const[step,setStep]=useState("name");
   const[first,setFirst]=useState("");const[surname,setSurname]=useState("");
   const[pin,setPin]=useState("");const[confirm,setConfirm]=useState("");
   const[err,setErr]=useState("");const[loading,setLoading]=useState(false);
+  const[foundBatchId,setFoundBatchId]=useState(null);
+  const[lockedMeta,setLockedMeta]=useState(null);
+  const[reqNote,setReqNote]=useState("");const[reqSent,setReqSent]=useState(false);
   const full=`${first.trim()} ${surname.trim()}`.trim();const ready=first.trim()&&surname.trim();
   const key=keyOf(full);
   const inp={width:"100%",padding:"13px 14px",borderRadius:10,border:`1px solid ${B.sage}`,fontSize:16,fontFamily:"'EB Garamond',serif",boxSizing:"border-box",background:"white",marginBottom:11,outline:"none"};
-  const handleName=async()=>{if(!ready)return;setLoading(true);
-    const alreadyRegistered=!!(settings.registeredNames||{})[key];
-    if(alreadyRegistered){setStep("returning");setLoading(false);return;}
-    const wl=settings.whitelist||[];const onList=wl.some(n=>n.toLowerCase()===full.toLowerCase());
+
+  const findExistingBatch=async()=>{
+    const ids=Object.keys(batchIndex||{});
+    const checks=await Promise.all(ids.map(async id=>{
+      const reg=await rtGet(bp(id,`registeredNames/${key}`));
+      return reg?{batchId:id,reg}:null;
+    }));
+    return checks.find(Boolean)||null;
+  };
+
+  const handleName=async()=>{if(!ready)return;setLoading(true);setErr("");
+    const existing=await findExistingBatch();
+    if(existing){setFoundBatchId(existing.batchId);setStep("returning");setLoading(false);return;}
+    if(!activeBatchId){setErr("There is no course currently open for new registration. Please check with your teacher.");setLoading(false);return;}
+    const wl=await rtGet(bp(activeBatchId,"whitelist"))||[];
+    const onList=wl.some(n=>n.toLowerCase()===full.toLowerCase());
     if(!onList){setErr("Your name is not on the approved list. Please check with your teacher.");setLoading(false);return;}
-    if(settings.courseLocked){setErr("Registration is currently closed. Please contact your teacher.");setLoading(false);return;}
     setErr("");setStep("pin");setLoading(false);};
+
   const handlePin=async()=>{
     if(pin.length!==4||!/^\d{4}$/.test(pin)){setErr("Please enter a 4-digit PIN.");return;}
     if(pin!==confirm){setErr("PINs do not match.");return;}
     setLoading(true);setErr("");
     try{
-      const d=await authSignUp(pseudoEmail(key),derivePassword(pin));
+      const d=await authSignUp(pseudoEmail(activeBatchId,key),derivePassword(pin));
       setSession(d);
-      await registerName(key,d.localId);
-      setLoading(false);onEnter(full);
+      await registerName(activeBatchId,key,d.localId);
+      setLoading(false);onEnter(full,activeBatchId,d.localId);
     }catch(e){
       setLoading(false);
       if(String(e.message).includes("EMAIL_EXISTS")){setErr("This name is already registered. Please go back and use 'Not you?' to sign in instead.");}
       else{setErr("Could not set up your account. Please check your connection and try again.");}
     }};
+
   const handleReturn=async()=>{
     setLoading(true);setErr("");
     try{
-      const d=await authSignIn(pseudoEmail(key),derivePassword(pin));
+      const d=await authSignIn(pseudoEmail(foundBatchId,key),derivePassword(pin));
       setSession(d);
-      setLoading(false);onEnter(full);
+      const[meta,reg]=await Promise.all([loadBatchMeta(foundBatchId),rtGet(bp(foundBatchId,`registeredNames/${key}`))]);
+      if(!studentAccessAllowed(meta,reg)){setLockedMeta(meta);setStep("locked");setLoading(false);return;}
+      setLoading(false);onEnter(full,foundBatchId,d.localId,meta);
     }catch(e){
       setLoading(false);
       setErr("Incorrect PIN.");
     }};
+
+  const sendExtensionRequest=async()=>{
+    setLoading(true);
+    await submitExtensionRequest(foundBatchId,session.uid,full,reqNote||"Requesting continued access.");
+    setLoading(false);setReqSent(true);
+  };
+
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
     <div style={{width:"100%",maxWidth:390,background:"white",borderRadius:20,padding:30,boxShadow:"0 4px 22px rgba(91,73,105,0.11)",textAlign:"center"}}>
       <div style={{display:"flex",justifyContent:"center",marginBottom:14}}><LotusImg size={56} float/></div>
@@ -844,6 +1129,16 @@ const WelcomeScreen=({settings,onEnter})=>{
         {err&&<div style={{color:B.red,fontSize:12,marginTop:8,textAlign:"center"}}>{err}</div>}
         <button onClick={handleReturn} disabled={loading} style={{width:"100%",marginTop:18,padding:"14px",borderRadius:12,background:B.darkPurple,color:"white",border:"none",fontSize:14,fontFamily:"DM Sans,sans-serif",fontWeight:400,letterSpacing:"0.6px",cursor:"pointer"}}>{loading?"Checking…":"Step Into Your Practice"}</button>
         <button onClick={()=>{setStep("name");setFirst("");setSurname("");setPin("");setErr("");}} style={{width:"100%",marginTop:10,padding:"10px",borderRadius:12,background:"none",color:B.purple,border:`1px solid #C5BBCE`,fontSize:13,cursor:"pointer"}}>Not you? Go back</button>
+      </>}
+      {step==="locked"&&<>
+        <div style={{display:"flex",justifyContent:"center",marginBottom:6}}><div style={{width:60,height:60,borderRadius:"50%",background:B.purple,display:"flex",alignItems:"center",justifyContent:"center"}}><IconGate color="white" size={30}/></div></div>
+        <h2 style={{color:B.darkPurple,fontSize:20,margin:"14px 0 8px",fontFamily:"'EB Garamond',serif",fontWeight:500}}>Your access period has ended</h2>
+        <p style={{color:B.purple,fontSize:13.5,marginBottom:18,lineHeight:1.65,fontFamily:"'EB Garamond',serif"}}>This batch's login window has closed. Your reflections and progress are still safely kept — if you'd like continued access, you can request it below.</p>
+        {!reqSent?<>
+          <textarea value={reqNote} onChange={e=>setReqNote(e.target.value)} placeholder="Optional note to your teacher…" style={{...inp,minHeight:70,resize:"vertical"}}/>
+          <button onClick={sendExtensionRequest} disabled={loading} style={{width:"100%",marginTop:8,padding:"13px",borderRadius:12,background:B.purple,color:"white",border:"none",fontSize:13.5,fontFamily:"DM Sans,sans-serif",cursor:"pointer"}}>{loading?"Sending…":"Request extended access"}</button>
+        </>:<div style={{color:B.sage,fontSize:13.5,fontWeight:600}}>Request sent — your teacher will be in touch.</div>}
+        <button onClick={()=>{setStep("name");setFirst("");setSurname("");setPin("");setErr("");setReqSent(false);}} style={{width:"100%",marginTop:14,padding:"10px",borderRadius:12,background:"none",color:B.purple,border:`1px solid #C5BBCE`,fontSize:13,cursor:"pointer"}}>Go back</button>
       </>}
       <div style={{marginTop:26}}><CurvedLogo width={140} opacity={0.48}/></div>
     </div>
@@ -909,47 +1204,147 @@ const LoginScreen=({onStudent,onAdmin})=>{
 };
 
 // ── ROOT ──
+// ── ADMIN: BATCH LIST / CREATE ──
+const slugify=s=>s.trim().toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||`batch-${Date.now()}`;
+const AdminBatches=({batchIndex,onSelect,onCreated,onRefresh})=>{
+  const[showForm,setShowForm]=useState(false);
+  const[form,setForm]=useState({name:"",start:"",lessons:"",whitelist:""});
+  const[creating,setCreating]=useState(false);const[toast,setToast]=useState(null);
+  const entries=Object.entries(batchIndex||{}).sort((a,b)=>(b[1].order||0)-(a[1].order||0));
+  const create=async()=>{
+    if(!form.name.trim())return;
+    setCreating(true);
+    const id=slugify(form.name);
+    const names=form.whitelist.split("\n").map(n=>n.trim()).filter(Boolean);
+    const meta={name:form.name.trim(),status:"active",started:form.start||todayISO(),lessonCount:Math.min(20,Number(form.lessons)||20),order:Date.now()};
+    await saveBatchMeta(id,meta);
+    await saveWhitelist(id,names);
+    setCreating(false);setShowForm(false);setForm({name:"",start:"",lessons:"",whitelist:""});
+    setToast(`${meta.name} created`);
+    onCreated&&onCreated(id);
+  };
+  return(<div style={{padding:14,paddingBottom:40,maxWidth:520,margin:"0 auto"}}>
+    {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+      <div style={{fontFamily:"'EB Garamond',serif",fontSize:22,fontWeight:500,color:B.adminDark}}>Batches</div>
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={onRefresh} style={{padding:"6px 10px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>↻</button>
+        <button onClick={()=>setShowForm(true)} style={{display:"flex",alignItems:"center",gap:5,padding:"7px 13px",borderRadius:9,border:"none",background:B.adminDark,color:"white",fontSize:12,cursor:"pointer"}}><IconPlus size={12}/>New Batch</button>
+      </div>
+    </div>
+    {showForm&&<div style={{background:"white",borderRadius:14,padding:"16px 18px",marginBottom:16,boxShadow:"0 4px 16px rgba(44,31,58,0.1)"}}>
+      <div style={{fontSize:15,fontWeight:600,color:B.adminDark,marginBottom:12}}>Create New Batch</div>
+      <label style={{fontSize:11.5,color:B.purple}}>Batch name</label>
+      <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="e.g. BYC 2026-B" style={{width:"100%",padding:"9px 11px",borderRadius:8,border:`1.5px solid #C5BBCE`,marginTop:4,marginBottom:12,fontFamily:"'EB Garamond',serif",fontSize:13,boxSizing:"border-box"}}/>
+      <div style={{display:"flex",gap:10}}>
+        <div style={{flex:1}}>
+          <label style={{fontSize:11.5,color:B.purple}}>Start date</label>
+          <input type="date" value={form.start} onChange={e=>setForm(f=>({...f,start:e.target.value}))} style={{width:"100%",padding:"9px 11px",borderRadius:8,border:`1.5px solid #C5BBCE`,marginTop:4,marginBottom:12,fontFamily:"'EB Garamond',serif",fontSize:13,boxSizing:"border-box"}}/>
+        </div>
+        <div style={{flex:1}}>
+          <label style={{fontSize:11.5,color:B.purple}}>Expected lesson count</label>
+          <input type="number" min="1" max="20" value={form.lessons} onChange={e=>setForm(f=>({...f,lessons:e.target.value}))} placeholder="e.g. 15 (max 20)" style={{width:"100%",padding:"9px 11px",borderRadius:8,border:`1.5px solid #C5BBCE`,marginTop:4,marginBottom:12,fontFamily:"'EB Garamond',serif",fontSize:13,boxSizing:"border-box"}}/>
+        </div>
+      </div>
+      <label style={{fontSize:11.5,color:B.purple}}>Student whitelist (one name per line)</label>
+      <textarea value={form.whitelist} onChange={e=>setForm(f=>({...f,whitelist:e.target.value}))} placeholder={"Priya Sharma\nMeera Iyer"} style={{width:"100%",minHeight:90,padding:"9px 11px",borderRadius:8,border:`1.5px solid #C5BBCE`,marginTop:4,marginBottom:16,fontFamily:"'EB Garamond',serif",fontSize:13,boxSizing:"border-box",resize:"vertical"}}/>
+      <div style={{display:"flex",gap:10}}>
+        <button onClick={create} disabled={creating} style={{padding:"10px 18px",borderRadius:8,border:"none",background:B.green,color:"white",fontSize:13,fontWeight:600,cursor:"pointer"}}>{creating?"Creating…":"Create Batch"}</button>
+        <button onClick={()=>setShowForm(false)} style={{padding:"10px 18px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.adminDark,fontSize:13,cursor:"pointer"}}>Cancel</button>
+      </div>
+    </div>}
+    {entries.length===0&&<p style={{color:B.purple,fontSize:14,fontStyle:"italic",fontFamily:"'EB Garamond',serif"}}>No batches yet — create your first one above.</p>}
+    {entries.map(([id,e])=>(<div key={id} onClick={()=>onSelect(id)} style={{background:"white",borderRadius:12,padding:"13px 15px",marginBottom:8,cursor:"pointer",boxShadow:"0 2px 8px rgba(44,31,58,0.07)",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+      <div style={{fontFamily:"'EB Garamond',serif",fontSize:16,fontWeight:600,color:B.adminDark}}>{e.name}</div>
+      <span style={{fontSize:10.5,padding:"3px 10px",borderRadius:20,background:e.status==="active"?"#F5F4E1":e.status==="window"?"#FBF3DC":"#F1EAF0",color:e.status==="active"?B.green:e.status==="window"?"#B08B1F":B.purple}}>{e.status==="active"?"Active":e.status==="window"?"In access window":"Locked"}</span>
+    </div>))}
+  </div>);
+};
+// ── ROOT ──
 function App(){
-  const[role,setRole]=useState(null);const[student,setStudent]=useState(null);const[uid,setUid]=useState(null);
+  const[role,setRole]=useState(null); // null|welcome|student|admin
+  const[student,setStudent]=useState(null);const[uid,setUid]=useState(null);
+  const[batchId,setBatchId]=useState(null);const[batchMeta,setBatchMeta]=useState(null);
+  const[batchIndex,setBatchIndex]=useState({});
   const[lessons,setLessons]=useState(null);const[responses,setResponses]=useState([]);
-  const[feedback,setFeedback]=useState([]);const[settings,setSettings]=useState(null);
-  const[legacyStudents,setLegacyStudents]=useState(null);
+  const[feedback,setFeedback]=useState([]);const[journal,setJournal]=useState({});const[badges,setBadges]=useState({});
+  const[recap,setRecap]=useState(null);const[newBadge,setNewBadge]=useState(false);
+  const[whitelist,setWhitelist]=useState([]);const[extensionRequests,setExtensionRequests]=useState({});
+  const[adminView,setAdminView]=useState("batches"); // batches|dashboard
   const[loading,setLoading]=useState(true);const[error,setError]=useState(null);
 
-  // Public settings only — safe to load before anyone signs in (needed for the welcome screen).
-  const loadPublic=useCallback(async()=>{setLoading(true);setError(null);try{setSettings(await loadPublicSettings());}catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);}},[]);
+  const activeBatchId=Object.entries(batchIndex).find(([,e])=>e.status==="active")?.[0]||null;
+
+  // Public: safe to load before anyone signs in (needed for the welcome screen's batch lookup).
+  const loadPublic=useCallback(async()=>{setLoading(true);setError(null);try{setBatchIndex(await loadBatchIndex());}catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);}},[]);
   useEffect(()=>{loadPublic();},[]);
 
-  // Runs once a student is signed in — only ever fetches THEIR OWN data.
-  const loadStudentData=useCallback(async theUid=>{setLoading(true);setError(null);try{const[ls,rs,fb]=await Promise.all([loadLessons(false),loadMyResponses(theUid),loadMyFeedback(theUid)]);setLessons(ls);setResponses(rs);setFeedback(fb);}catch(e){setError("Could not load your lessons. Please check your connection.");}finally{setLoading(false);}},[]);
+  // Runs once a student is signed in — only ever fetches THEIR OWN data, scoped to their batch.
+  const loadStudentData=useCallback(async(theBatchId,theUid,knownMeta)=>{setLoading(true);setError(null);try{
+    const meta=knownMeta||await loadBatchMeta(theBatchId);
+    const[ls,rs,fb,jr,bd,rc]=await Promise.all([loadLessons(theBatchId,meta?.lessonCount,false),loadMyResponses(theBatchId,theUid),loadMyFeedback(theBatchId,theUid),loadMyJournal(theBatchId,theUid),loadMyBadges(theBatchId,theUid),loadRecap(theBatchId)]);
+    setBatchMeta(meta);setLessons(ls);setResponses(rs);setFeedback(fb);setJournal(jr);setBadges(bd);setRecap(rc);
+  }catch(e){setError("Could not load your lessons. Please check your connection.");}finally{setLoading(false);}},[]);
 
-  // Runs once admin is signed in — fetches everything, including the (soon to be deleted) legacy PIN store.
-  const loadAdminData=useCallback(async()=>{setLoading(true);setError(null);try{
-    const pub=await loadPublicSettings();setSettings(pub);
-    const[ls,legacy]=await Promise.all([loadLessons(true),loadLegacyStudents()]);
-    setLessons(ls);setLegacyStudents(legacy);
-    const[rs,fb]=await Promise.all([loadAllResponses(pub.registeredNames),loadAllFeedback(pub.registeredNames)]);
-    setResponses(rs);setFeedback(fb);
+  // Admin: loads one batch's full detail for management.
+  const loadBatchDetail=useCallback(async(theBatchId)=>{setLoading(true);setError(null);try{
+    const[meta,wl,ls,rc,reqs]=await Promise.all([loadBatchMeta(theBatchId),rtGet(bp(theBatchId,"whitelist")),loadLessons(theBatchId,undefined,true),loadRecap(theBatchId),loadExtensionRequests(theBatchId)]);
+    const registeredNames=await rtGet(bp(theBatchId,"registeredNames"));
+    const[rs,fb]=await Promise.all([loadAllResponses(theBatchId,registeredNames),loadAllFeedback(theBatchId,registeredNames)]);
+    setBatchMeta(meta);setWhitelist(wl||[]);setLessons(ls);setRecap(rc);setExtensionRequests(reqs);setResponses(rs);setFeedback(fb);
   }catch(e){setError("Could not connect to Firebase. Please check your internet connection.");}finally{setLoading(false);}},[]);
 
-  const onSaveLesson=useCallback(async upd=>{const ok=await saveLesson(upd);if(ok)setLessons(prev=>prev.map(l=>l.id===upd.id?upd:l));return ok;},[]);
-  const onSubmitQuiz=useCallback(async entry=>{const full={...entry,uid};const ok=await saveResponse(uid,full);if(ok)setResponses(prev=>[...prev.filter(r=>r.lessonId!==entry.lessonId),full]);},[uid]);
-  const onSaveSettings=useCallback(async s=>{await saveWhitelistAndLock(s);setSettings(p=>({...p,whitelist:s.whitelist,courseLocked:s.courseLocked}));},[]);
+  const onSaveLesson=useCallback(async upd=>{const ok=await saveLesson(batchId,upd);if(ok)setLessons(prev=>prev.map(l=>l.id===upd.id?upd:l));return ok;},[batchId]);
 
-  const enterStudent=name=>{const theUid=session.uid;setStudent(name);setUid(theUid);setRole("student");loadStudentData(theUid);};
-  const enterAdmin=()=>{setUid(session.uid);setRole("admin");loadAdminData();};
-  const retry=role==="admin"?loadAdminData:role==="student"?()=>loadStudentData(uid):loadPublic;
+  const onSubmitQuiz=useCallback(async entry=>{
+    const full={...entry,uid};
+    const ok=await saveResponse(batchId,uid,full);
+    if(ok){
+      const nextResponses=[...responses.filter(r=>r.lessonId!==entry.lessonId),full];
+      setResponses(nextResponses);
+      // Minimal (1) milestone: course-complete badge once every expected lesson has a response.
+      const expected=batchMeta?.lessonCount||lessons.length;
+      if(!badges.courseComplete&&nextResponses.length>=expected){
+        await saveBadge(batchId,uid,"courseComplete",new Date().toISOString());
+        setBadges(b=>({...b,courseComplete:true}));
+        setNewBadge(true);
+      }
+    }
+  },[batchId,uid,responses,badges,batchMeta,lessons]);
+
+  const onSaveJournal=useCallback(async(lessonId,entry)=>{
+    const ok=await saveJournalEntry(batchId,uid,lessonId,entry);
+    if(ok)setJournal(prev=>({...prev,[lessonId]:entry}));
+  },[batchId,uid]);
+
+  // ── Admin batch-management actions ──
+  const onSaveWhitelist=useCallback(async wl=>{await saveWhitelist(batchId,wl);setWhitelist(wl);},[batchId]);
+  const onMarkComplete=useCallback(async()=>{await markCourseComplete(batchId,batchMeta);const m=await loadBatchMeta(batchId);setBatchMeta(m);setBatchIndex(await loadBatchIndex());},[batchId,batchMeta]);
+  const onSetNextSession=useCallback(async iso=>{const m={...batchMeta,nextSessionAt:iso};await saveBatchMeta(batchId,m);setBatchMeta(m);},[batchId,batchMeta]);
+  const onResolveExtension=useCallback(async(reqUid,granted)=>{await resolveExtensionRequest(batchId,reqUid,granted);const reqs=await loadExtensionRequests(batchId);setExtensionRequests(reqs);},[batchId]);
+  const onSaveRecap=useCallback(async rc=>{await saveRecap(batchId,rc);setRecap(rc);},[batchId]);
+
+  const enterStudent=(name,theBatchId,theUid,meta)=>{setStudent(name);setBatchId(theBatchId);setUid(theUid);setRole("student");loadStudentData(theBatchId,theUid,meta);};
+  const enterAdmin=()=>{setUid(session.uid);setRole("admin");setAdminView("batches");setLoading(false);};
+  const selectBatch=async(id)=>{setBatchId(id);setAdminView("dashboard");await loadBatchDetail(id);};
+  const backToBatches=async()=>{setAdminView("batches");setBatchId(null);setBatchIndex(await loadBatchIndex());};
+  const refreshAdmin=()=>batchId&&loadBatchDetail(batchId);
+  const refreshBatchList=async()=>setBatchIndex(await loadBatchIndex());
+
+  const retry=role==="admin"?(adminView==="dashboard"?refreshAdmin:refreshBatchList):role==="student"?()=>loadStudentData(batchId,uid,batchMeta):loadPublic;
 
   if(loading)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16}}><LotusImg size={60} float/><span style={{color:B.purple,fontSize:14,letterSpacing:1}}>Connecting…</span></div>);
   if(error)return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:16,padding:24}}><LotusImg size={60}/><p style={{color:B.red,fontSize:14,textAlign:"center",maxWidth:300}}>{error}</p><button onClick={retry} style={{padding:"10px 24px",borderRadius:10,background:B.green,color:"white",border:"none",fontSize:14,cursor:"pointer"}}>Retry</button></div>);
   return(<>
     {!role&&<LoginScreen onStudent={()=>setRole("welcome")} onAdmin={enterAdmin}/>}
-    {role==="welcome"&&settings&&<WelcomeScreen settings={settings} onEnter={enterStudent}/>}
-    {role==="student"&&lessons&&<StudentDashboard studentName={student} lessons={lessons} responses={responses} feedback={feedback} onSubmitQuiz={onSubmitQuiz}/>}
-    {role==="admin"&&lessons&&<AdminDashboard lessons={lessons} responses={responses} feedback={feedback} settings={settings} legacyStudents={legacyStudents} onSaveLesson={onSaveLesson} onSaveSettings={onSaveSettings} onRefresh={loadAdminData} onMigrated={loadAdminData}/>}
+    {role==="welcome"&&<WelcomeScreen batchIndex={batchIndex} activeBatchId={activeBatchId} onEnter={enterStudent}/>}
+    {role==="student"&&lessons&&<StudentDashboard studentName={student} lessons={lessons} responses={responses} feedback={feedback} journal={journal} badges={badges} recap={recap} batchMeta={batchMeta} onSubmitQuiz={onSubmitQuiz} onSaveJournal={onSaveJournal} newBadge={newBadge} onDismissBadge={()=>setNewBadge(false)}/>}
+    {role==="admin"&&adminView==="batches"&&<div style={{minHeight:"100vh",background:B.linen}}><AppHeader bg={B.adminDark} admin sub="Admin"/><AdminBatches batchIndex={batchIndex} onSelect={selectBatch} onCreated={selectBatch} onRefresh={refreshBatchList}/></div>}
+    {role==="admin"&&adminView==="dashboard"&&lessons&&<AdminDashboard batchId={batchId} batchMeta={batchMeta} lessons={lessons} responses={responses} feedback={feedback} whitelist={whitelist} recap={recap} extensionRequests={extensionRequests} onSaveLesson={onSaveLesson} onSaveWhitelist={onSaveWhitelist} onMarkComplete={onMarkComplete} onSetNextSession={onSetNextSession} onResolveExtension={onResolveExtension} onSaveRecap={onSaveRecap} onRefresh={refreshAdmin} onBackToBatches={backToBatches}/>}
   </>);
 }
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
 </html>
+
