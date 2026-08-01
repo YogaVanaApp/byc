@@ -24,11 +24,11 @@ body{background:#E2DCD0;-webkit-font-smoothing:antialiased;font-family:'DM Sans'
 .rich-editor img{display:block;max-width:100%;border-radius:8px;margin:14px 0}
 .prose-reading h2{font-family:'EB Garamond',serif;font-size:1.55em;color:#5B4969;margin:1.1em 0 0.45em}
 .prose-reading h3{font-family:'EB Garamond',serif;font-size:1.05em;color:#5B4969;margin:0.9em 0 0.35em}
+.prose-reading h4{font-family:'EB Garamond',serif;font-size:1.05em;color:#8a7a1f;margin:0.9em 0 0.35em}
 .prose-reading p{margin-bottom:0.95em;line-height:1.85;font-size:18px;color:#2a1f35}
 .prose-reading ul{padding-left:1.5em;margin-bottom:0.95em}
 .prose-reading li{margin-bottom:0.45em;line-height:1.75;font-size:18px;color:#2a1f35}
 .prose-reading img{max-width:100%;border-radius:10px;margin:10px 0}
-.prose-reading-body h4{font-family:'EB Garamond',serif;font-size:1.05em;color:#8a7a1f;margin:0.9em 0 0.35em}
 .prose-reading-body ul{list-style:none;padding-left:0}
 .prose-reading-body ul li{padding-left:14px;border-left:3px solid #E0B515;margin-bottom:10px}
 .prose-reading-body img.wrap-img{float:right;width:150px;height:150px;object-fit:cover;border-radius:8px;margin:0 0 10px 16px;max-width:150px}
@@ -396,8 +396,8 @@ const QuizEditor=({quiz,onChange})=>{
       <span style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Reflection Prompts ({rf.length}/3)</span>
       {rf.length<3&&<button onClick={()=>setRF([...rf,""])} style={{padding:"7px 13px",borderRadius:8,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer"}}>+ Add</button>}
     </div>
-    {rf.map((r,i)=>(<div key={i} style={{display:"flex",gap:8,marginBottom:9}}>
-      <textarea value={r} rows={2} placeholder="Reflection prompt…" onChange={e=>{const a=[...rf];a[i]=e.target.value;setRF(a);}} style={{...inp,resize:"vertical",marginBottom:0,flex:1}}/>
+    {rf.map((r,i)=>(<div key={i} style={{display:"flex",gap:8,marginBottom:9,alignItems:"flex-start"}}>
+      <div style={{flex:1}}><RichEditor value={r} onChange={v=>{const a=[...rf];a[i]=v;setRF(a);}} placeholder="Reflection prompt…" variant="reading"/></div>
       <button onClick={()=>{const a=[...rf];a.splice(i,1);setRF(a);}} style={{background:"none",border:"none",cursor:"pointer",color:B.red,paddingTop:8,fontSize:16}}>🗑</button>
     </div>))}
   </div>);
@@ -653,7 +653,7 @@ const FeedbackWriter=({lesson,response,existingFb,onBack})=>{
         const rf=rFb[i]||{stamp:null,note:"",resourceTitle:"",resourceUrl:""};
         return(<div key={i} style={{background:"white",borderRadius:11,padding:"13px 14px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
           <SL c={`Reflection ${i+1}`} color={B.green}/>
-          <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.purple,marginBottom:6,lineHeight:1.5}}>{prompt}</div>
+          <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.purple,marginBottom:6,lineHeight:1.5}} dangerouslySetInnerHTML={{__html:prompt}}/>
           <div style={{fontFamily:"'EB Garamond',serif",fontSize:14,color:B.adminDark,lineHeight:1.7,padding:"8px 10px",background:"#f7f5f2",borderRadius:8,marginBottom:10}}>{response.reflections?.[i]||<em style={{color:B.sage}}>No response</em>}</div>
           <StampSel selected={rf.stamp} onSelect={s=>setRFb(p=>({...p,[i]:{...rf,stamp:s}}))}/>
           {rf.stamp==="seeds"&&<div style={{background:"#fdf3d0",borderRadius:9,padding:"9px 11px",marginBottom:8,border:"1px solid #E0B51530"}}>
@@ -815,7 +815,7 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
       {mcQs.length>1&&<button onClick={()=>setShowAllQ(v=>!v)} style={{width:"100%",padding:"10px",borderRadius:10,background:"white",color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.08)",marginBottom:14}}>{showAllQ?"Hide questions ↑":`Review all ${mcQs.length} questions ↓`}</button>}
       <Div/><SL c="REFLECTIONS" color={B.darkPurple}/>
       {(showAllR?rfPs:rfPs.slice(0,1)).map((prompt,i)=>{const fb=myFb?.reflections?.[i];return(<div key={i} style={{marginBottom:12}}>
-        <div style={{fontSize:12,color:B.darkPurple,fontWeight:500,marginBottom:6}}>{prompt}</div>
+        <div style={{fontSize:12,color:B.darkPurple,fontWeight:500,marginBottom:6}} dangerouslySetInnerHTML={{__html:prompt}}/>
         <div style={{background:B.linen,borderRadius:10,padding:"10px 13px",fontFamily:"'EB Garamond',serif",fontSize:15,color:B.darkPurple,lineHeight:1.7,marginBottom:fb?.stamp?8:0}}>{reflT[i]||<em style={{color:B.sage}}>No response.</em>}</div>
         {fb?.stamp&&<div style={{background:"white",borderRadius:10,padding:"10px 12px",borderLeft:`3px solid ${B.metalGold}`,marginTop:6}}>
           <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:6}}>From your teacher</div>
@@ -827,7 +827,7 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
     </>):(mcQs.length>0||rfPs.length>0?(<>
       {mcQs.map((q,i)=><RP key={i} i={i} q={q}/>)}
       {rfPs.map((prompt,i)=>(<div key={i} style={{marginBottom:14}}>
-        <div style={{fontSize:13,color:B.darkPurple,fontWeight:500,marginBottom:8}}>{prompt}</div>
+        <div style={{fontSize:13,color:B.darkPurple,fontWeight:500,marginBottom:8}} dangerouslySetInnerHTML={{__html:prompt}}/>
         <textarea value={reflT[i]||""} rows={4} onChange={e=>{const r=[...reflT];r[i]=e.target.value;setReflT(r);}} placeholder="Write your reflection…" style={{width:"100%",padding:"11px 13px",borderRadius:10,border:`1px solid ${B.sage}`,fontFamily:"'EB Garamond',serif",fontSize:16,resize:"vertical",boxSizing:"border-box",background:"white"}}/>
       </div>))}
       {!readOnly&&<button onClick={submit} disabled={submitting} style={{width:"100%",padding:"13px",borderRadius:10,background:submitting?"#888":B.green,color:"white",border:"none",fontSize:14,fontWeight:500,cursor:submitting?"wait":"pointer",marginTop:4,letterSpacing:0.5}}>{submitting?"Submitting…":"Submit Quiz"}</button>}
@@ -1045,7 +1045,7 @@ const StudentDashboard=({studentName,lessons,responses,feedback,journal,badges,r
             <div style={{height:1,background:B.sage,opacity:0.25,margin:"14px 0"}}/>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:B.darkPurple,marginBottom:10}}>REFLECTIONS</div>
             {(srAll?rfPs:rfPs.slice(0,1)).map((prompt,i)=>{const fb=myFb?.reflections?.[i];return(<div key={i} style={{marginBottom:12}}>
-              <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13.5,color:B.purple,lineHeight:1.55,marginBottom:6}}>{prompt}</div>
+              <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13.5,color:B.purple,lineHeight:1.55,marginBottom:6}} dangerouslySetInnerHTML={{__html:prompt}}/>
               <div style={{fontFamily:"'EB Garamond',serif",fontSize:15,color:B.adminDark,lineHeight:1.7,padding:"10px 12px",background:"#F7F4F0",borderRadius:10,marginBottom:fb?.stamp?8:0}}>{r.reflections?.[i]||<em style={{color:B.sage}}>No response.</em>}</div>
               {fb?.stamp&&<div style={{background:"white",borderRadius:10,padding:"10px 12px",borderLeft:`3px solid ${B.metalGold}`,marginTop:6}}>
                 <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:6}}>From your teacher</div>
