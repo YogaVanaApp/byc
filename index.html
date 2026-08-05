@@ -608,7 +608,7 @@ const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
       const l=lessons.find(x=>x.id===r.lessonId);
       const hasFb=feedback.some(f=>f.lessonId===r.lessonId&&f.studentName===r.studentName);
       const status=l?completionStatus(l,r):"on-time";
-      return(<div key={i} onClick={()=>onOpen(r)} style={{background:"white",borderRadius:12,padding:"12px 13px",marginBottom:8,boxShadow:"0 2px 8px rgba(44,31,58,0.06)",cursor:"pointer"}}>
+      return(<div key={i} onClick={()=>onOpen(r,list,i)} style={{background:"white",borderRadius:12,padding:"12px 13px",marginBottom:8,boxShadow:"0 2px 8px rgba(44,31,58,0.06)",cursor:"pointer"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:3}}>
           <div style={{fontFamily:"'EB Garamond',serif",fontSize:16,fontWeight:600,color:B.adminDark}}>{by==="lesson"?r.studentName:`Lesson ${r.lessonId} — ${l?.title||""}`}</div>
           <div style={{display:"flex",alignItems:"center",gap:6}}>
@@ -625,16 +625,28 @@ const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
 };
 
 // ── FEEDBACK WRITER ──
-const FeedbackWriter=({lesson,response,existingFb,onBack})=>{
+const FeedbackWriter=({lesson,response,existingFb,onBack,onNavigate,hasPrev,hasNext,position})=>{
   const[overall,setOverall]=useState(existingFb?.overall||{stamp:null,note:"",resourceTitle:"",resourceUrl:""});
   const[rFb,setRFb]=useState(existingFb?.reflections||{});
   const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
   const rfPs=lesson?.quiz?.reflections||[];
-  const doSave=async()=>{setSaving(true);const ok=await saveFeedback(response.uid,response.lessonId,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,uid:response.uid,savedAt:new Date().toISOString()});setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
+  const persist=async()=>saveFeedback(response.uid,response.lessonId,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,uid:response.uid,savedAt:new Date().toISOString()});
+  const doSave=async()=>{setSaving(true);const ok=await persist();setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
+  const doNavigate=async dir=>{
+    // Auto-save whatever's been picked so far — even a lone stamp with no note — before switching students.
+    const hasAnything=overall.stamp||overall.note||Object.values(rFb).some(r=>r?.stamp||r?.note);
+    if(hasAnything)await persist();
+    onNavigate(dir);
+  };
   const ta={width:"100%",padding:"9px 11px",borderRadius:9,border:`1.5px solid ${B.sage}`,fontSize:13,fontFamily:"'EB Garamond',serif",color:B.adminDark,background:"white",resize:"none",minHeight:60,lineHeight:1.6,marginBottom:8,boxSizing:"border-box"};
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
     {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
     <AppHeader bg={B.adminDark} admin onBack={onBack} sub={COURSE_NAME}/>
+    {(hasPrev||hasNext)&&<div style={{background:B.adminDark,padding:"9px 16px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+      <button onClick={()=>doNavigate(-1)} disabled={!hasPrev} style={{background:"none",border:"none",color:hasPrev?"white":"rgba(255,255,255,0.3)",fontSize:20,cursor:hasPrev?"pointer":"default",padding:"0 8px"}}>‹</button>
+      <span style={{color:"rgba(255,255,255,0.6)",fontSize:11}}>{position}</span>
+      <button onClick={()=>doNavigate(1)} disabled={!hasNext} style={{background:"none",border:"none",color:hasNext?"white":"rgba(255,255,255,0.3)",fontSize:20,cursor:hasNext?"pointer":"default",padding:"0 8px"}}>›</button>
+    </div>}
     <div style={{flex:1,overflow:"auto",padding:14}}>
       <div style={{background:"white",borderRadius:11,padding:"11px 13px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
         <div style={{fontFamily:"'EB Garamond',serif",fontSize:17,fontWeight:600,color:B.adminDark,marginBottom:2}}>{response.studentName}</div>
@@ -727,10 +739,16 @@ const ProgressTab=({lessons,responses,whitelist})=>{
 
 // ── ADMIN DASHBOARD ──
 const AdminDashboard=({batchId,batchMeta,lessons,responses,feedback,whitelist,recap,extensionRequests,onSaveLesson,onSaveWhitelist,onMarkComplete,onSetNextSession,onResolveExtension,onSaveRecap,onRefresh,onBackToBatches})=>{
-  const[tab,setTab]=useState("lessons");const[editing,setEditing]=useState(null);const[openResp,setOpenResp]=useState(null);
+  const[tab,setTab]=useState("lessons");const[editing,setEditing]=useState(null);
+  const[openResp,setOpenResp]=useState(null);const[openList,setOpenList]=useState([]);const[openIdx,setOpenIdx]=useState(0);
   responses=(responses||[]).filter(Boolean);feedback=(feedback||[]).filter(Boolean);
   if(editing){const cur=lessons.find(l=>l.id===editing.id)||editing;return<LessonEdit lesson={cur} onSave={async upd=>{const ok=await onSaveLesson(upd);setEditing(upd);return ok;}} onBack={()=>{setEditing(null);onRefresh();}}/>;}
-  if(openResp){const l=lessons.find(x=>x.id===openResp.lessonId);const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);return<FeedbackWriter lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}}/>;}
+  if(openResp){
+    const l=lessons.find(x=>x.id===openResp.lessonId);
+    const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);
+    const goto=idx=>{if(idx<0||idx>=openList.length)return;setOpenResp(openList[idx]);setOpenIdx(idx);};
+    return<FeedbackWriter key={`${openResp.uid}_${openResp.lessonId}`} lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}} onNavigate={dir=>goto(openIdx+dir)} hasPrev={openIdx>0} hasNext={openIdx<openList.length-1} position={`${openIdx+1} of ${openList.length}`}/>;
+  }
   const requestCount=Object.keys(extensionRequests||{}).length;
   const adminTabs=[{id:"lessons",label:"Lessons",icon:<IBook/>},{id:"responses",label:"Responses",icon:<IDoc/>},{id:"progress",label:"Progress",icon:<IPeople/>}];
   return(<div style={{minHeight:"100vh",background:B.linen,display:"flex",flexDirection:"column"}}>
@@ -758,7 +776,7 @@ const AdminDashboard=({batchId,batchMeta,lessons,responses,feedback,whitelist,re
           </div>);
         })}
       </div>}
-      {tab==="responses"&&<ResponsesTab lessons={lessons} responses={responses} feedback={feedback} onOpen={r=>setOpenResp(r)}/>}
+      {tab==="responses"&&<ResponsesTab lessons={lessons} responses={responses} feedback={feedback} onOpen={(r,list,i)=>{setOpenResp(r);setOpenList(list);setOpenIdx(i);}}/>}
       {tab==="progress"&&<ProgressTab lessons={lessons} responses={responses} whitelist={whitelist}/>}
       {tab==="recap"&&<><button onClick={()=>setTab("lessons")} style={{margin:"14px 0 0 14px",padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>← Lessons</button><RecapEditor recap={recap} onSave={onSaveRecap}/></>}
       {tab==="settings"&&<><button onClick={()=>setTab("lessons")} style={{margin:"14px 0 0 14px",padding:"6px 12px",borderRadius:8,border:`1px solid ${B.sage}`,background:"white",color:B.purple,fontSize:11,cursor:"pointer"}}>← Lessons</button><AdminSettings batchId={batchId} meta={batchMeta} whitelist={whitelist} extensionRequests={extensionRequests} onSaveWhitelist={onSaveWhitelist} onMarkComplete={onMarkComplete} onSetNextSession={onSetNextSession} onResolveExtension={onResolveExtension}/></>}
