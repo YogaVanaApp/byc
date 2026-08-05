@@ -222,18 +222,18 @@ const saveLesson=(batchId,l)=>rtSet(bp(batchId,`lessons/${l.id}`),l);
 // can restrict each student to their own data. studentName/lessonId are still
 // stored inside each record for display, so existing UI code needs no changes.
 const saveResponse=(batchId,uid,e)=>rtSet(bp(batchId,`quizResponses/${uid}/${e.lessonId}`),{...e,uid});
-const loadMyResponses=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`quizResponses/${uid}`));return d?Object.values(d):[];};
+const loadMyResponses=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`quizResponses/${uid}`));return d?Object.values(d).filter(Boolean):[];};
 const loadAllResponses=async(batchId,registeredMap)=>{
   const uids=Object.values(registeredMap||{}).map(v=>typeof v==="string"?v:v.uid).filter(Boolean);
   const chunks=await Promise.all(uids.map(uid=>rtGet(bp(batchId,`quizResponses/${uid}`))));
-  return chunks.flatMap(c=>c?Object.values(c):[]);
+  return chunks.flatMap(c=>c?Object.values(c).filter(Boolean):[]);
 };
 const saveFeedback=(batchId,uid,lessonId,fb)=>rtSet(bp(batchId,`feedback/${uid}/${lessonId}`),fb);
-const loadMyFeedback=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`feedback/${uid}`));return d?Object.values(d):[];};
+const loadMyFeedback=async(batchId,uid)=>{const d=await rtGet(bp(batchId,`feedback/${uid}`));return d?Object.values(d).filter(Boolean):[];};
 const loadAllFeedback=async(batchId,registeredMap)=>{
   const uids=Object.values(registeredMap||{}).map(v=>typeof v==="string"?v:v.uid).filter(Boolean);
   const chunks=await Promise.all(uids.map(uid=>rtGet(bp(batchId,`feedback/${uid}`))));
-  return chunks.flatMap(c=>c?Object.values(c):[]);
+  return chunks.flatMap(c=>c?Object.values(c).filter(Boolean):[]);
 };
 
 // Private journal — one entry per lesson, per student. Admin never reads this,
@@ -974,7 +974,7 @@ const StudentDashboard=({studentName,lessons,responses,feedback,journal,badges,r
   const[tab,setTab]=useState("week");const[open,setOpen]=useState(null);const[reflL,setReflL]=useState(null);
   const released=lessons.filter(l=>l.readingReleased).sort((a,b)=>a.lessonNumber-b.lessonNumber);
   const latest=released[released.length-1]||null;const relCount=released.length;
-  const myResp=responses.filter(r=>r.studentName===studentName);const done=myResp.length;
+  const myResp=(responses||[]).filter(r=>r&&r.studentName===studentName);const done=myResp.length;
   const streak=computeStreak(lessons,myResp);
   const navTabs=[{id:"week",label:"This Week",icon:<IBook/>},{id:"bank",label:"Journey",icon:<IFan/>},{id:"journal",label:"Journal",icon:<IHeart/>},{id:"reflections",label:"Scores",icon:<IBook/>}];
   if(recap?.released)navTabs.push({id:"recap",label:"Recap",icon:<IFan/>});
