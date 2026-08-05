@@ -625,12 +625,12 @@ const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
 };
 
 // ── FEEDBACK WRITER ──
-const FeedbackWriter=({lesson,response,existingFb,onBack,onNavigate,hasPrev,hasNext,position})=>{
+const FeedbackWriter=({batchId,lesson,response,existingFb,onBack,onNavigate,hasPrev,hasNext,position})=>{
   const[overall,setOverall]=useState(existingFb?.overall||{stamp:null,note:"",resourceTitle:"",resourceUrl:""});
   const[rFb,setRFb]=useState(existingFb?.reflections||{});
   const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
   const rfPs=lesson?.quiz?.reflections||[];
-  const persist=async()=>saveFeedback(response.uid,response.lessonId,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,uid:response.uid,savedAt:new Date().toISOString()});
+  const persist=async()=>saveFeedback(batchId,response.uid,response.lessonId,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,uid:response.uid,savedAt:new Date().toISOString()});
   const doSave=async()=>{setSaving(true);const ok=await persist();setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
   const doNavigate=async dir=>{
     // Auto-save whatever's been picked so far — even a lone stamp with no note — before switching students.
@@ -747,7 +747,7 @@ const AdminDashboard=({batchId,batchMeta,lessons,responses,feedback,whitelist,re
     const l=lessons.find(x=>x.id===openResp.lessonId);
     const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);
     const goto=idx=>{if(idx<0||idx>=openList.length)return;setOpenResp(openList[idx]);setOpenIdx(idx);};
-    return<FeedbackWriter key={`${openResp.uid}_${openResp.lessonId}`} lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}} onNavigate={dir=>goto(openIdx+dir)} hasPrev={openIdx>0} hasNext={openIdx<openList.length-1} position={`${openIdx+1} of ${openList.length}`}/>;
+    return<FeedbackWriter batchId={batchId} key={`${openResp.uid}_${openResp.lessonId}`} lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}} onNavigate={dir=>goto(openIdx+dir)} hasPrev={openIdx>0} hasNext={openIdx<openList.length-1} position={`${openIdx+1} of ${openList.length}`}/>;
   }
   const requestCount=Object.keys(extensionRequests||{}).length;
   const adminTabs=[{id:"lessons",label:"Lessons",icon:<IBook/>},{id:"responses",label:"Responses",icon:<IDoc/>},{id:"progress",label:"Progress",icon:<IPeople/>}];
