@@ -588,6 +588,7 @@ const RecapEditor=({recap,onSave})=>{
 // ── RESPONSES TAB ──
 const ResponsesTab=({lessons,responses,feedback,onOpen})=>{
   const[by,setBy]=useState("lesson");const[selL,setSelL]=useState(null);const[selS,setSelS]=useState(null);
+  responses=(responses||[]).filter(Boolean);feedback=(feedback||[]).filter(Boolean);
   const released=lessons.filter(l=>l.readingReleased);
   const students=[...new Set(responses.map(r=>r.studentName))].sort();
   const list=by==="lesson"?responses.filter(r=>r.lessonId===selL):responses.filter(r=>r.studentName===selS);
@@ -727,6 +728,7 @@ const ProgressTab=({lessons,responses,whitelist})=>{
 // ── ADMIN DASHBOARD ──
 const AdminDashboard=({batchId,batchMeta,lessons,responses,feedback,whitelist,recap,extensionRequests,onSaveLesson,onSaveWhitelist,onMarkComplete,onSetNextSession,onResolveExtension,onSaveRecap,onRefresh,onBackToBatches})=>{
   const[tab,setTab]=useState("lessons");const[editing,setEditing]=useState(null);const[openResp,setOpenResp]=useState(null);
+  responses=(responses||[]).filter(Boolean);feedback=(feedback||[]).filter(Boolean);
   if(editing){const cur=lessons.find(l=>l.id===editing.id)||editing;return<LessonEdit lesson={cur} onSave={async upd=>{const ok=await onSaveLesson(upd);setEditing(upd);return ok;}} onBack={()=>{setEditing(null);onRefresh();}}/>;}
   if(openResp){const l=lessons.find(x=>x.id===openResp.lessonId);const fb=feedback.find(f=>f.lessonId===openResp.lessonId&&f.studentName===openResp.studentName);return<FeedbackWriter lesson={l} response={openResp} existingFb={fb} onBack={()=>{setOpenResp(null);onRefresh();}}/>;}
   const requestCount=Object.keys(extensionRequests||{}).length;
