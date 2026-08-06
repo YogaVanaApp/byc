@@ -69,6 +69,30 @@ const EMAIL_DOMAIN="yogavana.app";
 const B={green:"#A39C0F",purple:"#8A7099",darkPurple:"#5B4969",adminDark:"#2C1F3A",linen:"#E2DCD0",sage:"#7B8B6F",gold:"#E0B515",metalGold:"#d4af37",red:"#C0392B"};
 const LOTUS_URL="https://res.cloudinary.com/dudunfdov/image/upload/v1781093940/background-removed-background-removed-2_wz5nxf.png";
 const CURVED_LOGO="https://res.cloudinary.com/dudunfdov/image/upload/v1781539507/background-removed-background-removed-2_copy_ctn2lr.png";
+// Strips stray inline color/font styling that old pasted content can carry,
+// which otherwise silently overrides the app's CSS (even !important rules)
+// because inline styles win the cascade. Only touches color/background-color/
+// font-size/font-family — never layout properties (margin, width, float, etc.)
+// so images, dividers, and wrap-img spacing are untouched. Purely a display-time
+// fix: never mutates what's actually saved in Firebase.
+function sanitizeLessonHtml(html){
+  if(!html) return html;
+  try{
+    const tmp=document.createElement("div");
+    tmp.innerHTML=html;
+    tmp.querySelectorAll("*").forEach(el=>{
+      if(el.style){
+        el.style.removeProperty("color");
+        el.style.removeProperty("background-color");
+        el.style.removeProperty("font-size");
+        el.style.removeProperty("font-family");
+      }
+    });
+    return tmp.innerHTML;
+  }catch(e){
+    return html;
+  }
+}
 // v3 — batch/cohort system + streaks, journal, journey map, badges, recap.
 // DATA_ROOT switches the entire app between production and staging data with
 // zero risk of cross-contamination — change this one line, nothing else.
@@ -675,7 +699,7 @@ const FeedbackWriter=({batchId,lesson,response,existingFb,onBack,onNavigate,hasP
         const rf=rFb[i]||{stamp:null,note:"",resourceTitle:"",resourceUrl:""};
         return(<div key={i} style={{background:"white",borderRadius:11,padding:"13px 14px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
           <SL c={`Reflection ${i+1}`} color={B.green}/>
-          <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.purple,marginBottom:6,lineHeight:1.5}} dangerouslySetInnerHTML={{__html:prompt}}/>
+          <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13,color:B.purple,marginBottom:6,lineHeight:1.5}} dangerouslySetInnerHTML={{__html:sanitizeLessonHtml(prompt)}}/>
           <div style={{fontFamily:"'EB Garamond',serif",fontSize:14,color:B.adminDark,lineHeight:1.7,padding:"8px 10px",background:"#f7f5f2",borderRadius:8,marginBottom:10}}>{response.reflections?.[i]||<em style={{color:B.sage}}>No response</em>}</div>
           <StampSel selected={rf.stamp} onSelect={s=>setRFb(p=>({...p,[i]:{...rf,stamp:s}}))}/>
           {rf.stamp==="seeds"&&<div style={{background:"#fdf3d0",borderRadius:9,padding:"9px 11px",marginBottom:8,border:"1px solid #E0B51530"}}>
@@ -820,9 +844,9 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
     </div>}
     <SL c={`Lesson ${lesson.lessonNumber} · Pre-Class Reading`}/>
     <h1 style={{fontSize:32,color:"#8B5A2B",fontWeight:600,margin:"0 0 16px",lineHeight:1.2}}>{lesson.title}</h1>
-    {lesson.reading?<div className="prose-reading prose-reading-body" dangerouslySetInnerHTML={{__html:lesson.reading}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
+    {lesson.reading?<div className="prose-reading prose-reading-body" dangerouslySetInnerHTML={{__html:sanitizeLessonHtml(lesson.reading)}}/>:<p style={{color:B.sage,fontStyle:"italic",fontSize:16}}>Reading not yet available.</p>}
     <Div/><SL c="Session Summary"/>
-    {showSum?lesson.summary?<div style={{background:"rgba(163,156,15,0.07)",borderRadius:12,padding:"16px 18px",border:`1px solid ${B.sage}30`}}><div className="prose-reading prose-reading-summary" dangerouslySetInnerHTML={{__html:lesson.summary}}/></div>:<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>Summary not yet available.</p>
+    {showSum?lesson.summary?<div style={{background:"rgba(163,156,15,0.07)",borderRadius:12,padding:"16px 18px",border:`1px solid ${B.sage}30`}}><div className="prose-reading prose-reading-summary" dangerouslySetInnerHTML={{__html:sanitizeLessonHtml(lesson.summary)}}/></div>:<p style={{color:B.sage,fontStyle:"italic",fontSize:15}}>Summary not yet available.</p>
       :<div style={{background:"rgba(138,112,153,0.07)",borderRadius:12,padding:"16px 18px",border:`1px dashed ${B.sage}`,textAlign:"center"}}><p style={{color:B.purple,fontSize:16,fontStyle:"italic"}}>The session summary will appear here after class.</p><button style={{width:"100%",marginTop:10,padding:"11px",borderRadius:10,background:B.darkPurple,color:"white",border:"none",fontSize:12,fontWeight:400,opacity:0.55,cursor:"default",letterSpacing:0.6}}>Available After Class</button></div>}
     <Div/><SL c="Quiz & Reflections"/>
     {showQ?(submitted?(<>
@@ -844,7 +868,7 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
       {mcQs.length>1&&<button onClick={()=>setShowAllQ(v=>!v)} style={{width:"100%",padding:"10px",borderRadius:10,background:"white",color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer",boxShadow:"0 2px 8px rgba(91,73,105,0.08)",marginBottom:14}}>{showAllQ?"Hide questions ↑":`Review all ${mcQs.length} questions ↓`}</button>}
       <Div/><SL c="REFLECTIONS" color={B.darkPurple}/>
       {(showAllR?rfPs:rfPs.slice(0,1)).map((prompt,i)=>{const fb=myFb?.reflections?.[i];return(<div key={i} style={{marginBottom:12}}>
-        <div style={{fontSize:12,color:B.darkPurple,fontWeight:500,marginBottom:6}} dangerouslySetInnerHTML={{__html:prompt}}/>
+        <div style={{fontSize:12,color:B.darkPurple,fontWeight:500,marginBottom:6}} dangerouslySetInnerHTML={{__html:sanitizeLessonHtml(prompt)}}/>
         <div style={{background:B.linen,borderRadius:10,padding:"10px 13px",fontFamily:"'EB Garamond',serif",fontSize:15,color:B.darkPurple,lineHeight:1.7,marginBottom:fb?.stamp?8:0}}>{reflT[i]||<em style={{color:B.sage}}>No response.</em>}</div>
         {fb?.stamp&&<div style={{background:"white",borderRadius:10,padding:"10px 12px",borderLeft:`3px solid ${B.metalGold}`,marginTop:6}}>
           <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:6}}>From your teacher</div>
@@ -856,7 +880,7 @@ const LessonView=({lesson,studentName,responses,feedback,onSubmitQuiz,readOnly=f
     </>):(mcQs.length>0||rfPs.length>0?(<>
       {mcQs.map((q,i)=><RP key={i} i={i} q={q}/>)}
       {rfPs.map((prompt,i)=>(<div key={i} style={{marginBottom:14}}>
-        <div style={{fontSize:13,color:B.darkPurple,fontWeight:500,marginBottom:8}} dangerouslySetInnerHTML={{__html:prompt}}/>
+        <div style={{fontSize:13,color:B.darkPurple,fontWeight:500,marginBottom:8}} dangerouslySetInnerHTML={{__html:sanitizeLessonHtml(prompt)}}/>
         <textarea value={reflT[i]||""} rows={4} onChange={e=>{const r=[...reflT];r[i]=e.target.value;setReflT(r);}} placeholder="Write your reflection…" style={{width:"100%",padding:"11px 13px",borderRadius:10,border:`1px solid ${B.sage}`,fontFamily:"'EB Garamond',serif",fontSize:16,resize:"vertical",boxSizing:"border-box",background:"white"}}/>
       </div>))}
       {!readOnly&&<button onClick={submit} disabled={submitting} style={{width:"100%",padding:"13px",borderRadius:10,background:submitting?"#888":B.green,color:"white",border:"none",fontSize:14,fontWeight:500,cursor:submitting?"wait":"pointer",marginTop:4,letterSpacing:0.5}}>{submitting?"Submitting…":"Submit Quiz"}</button>}
@@ -1074,7 +1098,7 @@ const StudentDashboard=({studentName,lessons,responses,feedback,journal,badges,r
             <div style={{height:1,background:B.sage,opacity:0.25,margin:"14px 0"}}/>
             <div style={{fontSize:10,fontWeight:700,letterSpacing:2.5,textTransform:"uppercase",color:B.darkPurple,marginBottom:10}}>REFLECTIONS</div>
             {(srAll?rfPs:rfPs.slice(0,1)).map((prompt,i)=>{const fb=myFb?.reflections?.[i];return(<div key={i} style={{marginBottom:12}}>
-              <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13.5,color:B.purple,lineHeight:1.55,marginBottom:6}} dangerouslySetInnerHTML={{__html:prompt}}/>
+              <div style={{fontFamily:"'EB Garamond',serif",fontStyle:"italic",fontSize:13.5,color:B.purple,lineHeight:1.55,marginBottom:6}} dangerouslySetInnerHTML={{__html:sanitizeLessonHtml(prompt)}}/>
               <div style={{fontFamily:"'EB Garamond',serif",fontSize:15,color:B.adminDark,lineHeight:1.7,padding:"10px 12px",background:"#F7F4F0",borderRadius:10,marginBottom:fb?.stamp?8:0}}>{r.reflections?.[i]||<em style={{color:B.sage}}>No response.</em>}</div>
               {fb?.stamp&&<div style={{background:"white",borderRadius:10,padding:"10px 12px",borderLeft:`3px solid ${B.metalGold}`,marginTop:6}}>
                 <div style={{fontSize:8.5,letterSpacing:1.5,textTransform:"uppercase",color:B.purple,fontWeight:600,marginBottom:6}}>From your teacher</div>
