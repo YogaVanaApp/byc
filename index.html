@@ -387,6 +387,7 @@ const RichEditor=({value,onChange,placeholder,variant})=>{
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H2")}}>H2</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H3")}}>H3</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","H4")}}>H4</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();exec("formatBlock","P")}}>Normal</button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("bold")}}><b>B</b></button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("italic")}}><i>I</i></button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList")}}>• List</button>
