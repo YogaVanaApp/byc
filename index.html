@@ -336,11 +336,15 @@ const BottomNav=({tabs,active,onSelect,bg=B.darkPurple,ac=B.green})=>(
 // ── RICH EDITOR ──
 const RichEditor=({value,onChange,placeholder,variant})=>{
   const ref=useRef(null);const[imgUrl,setImgUrl]=useState("");const[imgMode,setImgMode]=useState(null);const mounted=useRef(false);
+  const savedRange=useRef(null);
   useEffect(()=>{if(!mounted.current&&ref.current){ref.current.innerHTML=value||"";mounted.current=true;}},[]);
+  const saveSelection=()=>{const sel=window.getSelection();if(sel&&sel.rangeCount>0&&ref.current&&ref.current.contains(sel.anchorNode)){savedRange.current=sel.getRangeAt(0).cloneRange();}};
+  const restoreSelection=()=>{ref.current?.focus();const sel=window.getSelection();if(sel&&savedRange.current){sel.removeAllRanges();sel.addRange(savedRange.current);}};
   const exec=(cmd,val=null)=>{document.execCommand(cmd,false,val);ref.current?.focus();};
   const tb={padding:"5px 8px",borderRadius:6,border:`1px solid ${B.sage}`,background:"white",cursor:"pointer",color:B.adminDark,fontSize:13};
   const insertImage=()=>{
     if(!imgUrl.trim())return;
+    restoreSelection();
     const html=imgMode==="wrap"
       ?`<img class="wrap-img" src="${imgUrl}"/>`
       :`<br/><img src="${imgUrl}" style="display:block;max-width:100%;border-radius:8px;margin:14px 0"/><br/>`;
@@ -357,8 +361,8 @@ const RichEditor=({value,onChange,placeholder,variant})=>{
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("bold")}}><b>B</b></button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("italic")}}><i>I</i></button>
       <button style={tb} onMouseDown={e=>{e.preventDefault();exec("insertUnorderedList")}}>• List</button>
-      <button style={tb} onMouseDown={e=>{e.preventDefault();setImgMode(m=>m==="full"?null:"full")}} title="Full-width image">🖼 Full</button>
-      <button style={tb} onMouseDown={e=>{e.preventDefault();setImgMode(m=>m==="wrap"?null:"wrap")}} title="Small image, text wraps around it">🖼 Small</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();saveSelection();setImgMode(m=>m==="full"?null:"full")}} title="Full-width image">🖼 Full</button>
+      <button style={tb} onMouseDown={e=>{e.preventDefault();saveSelection();setImgMode(m=>m==="wrap"?null:"wrap")}} title="Small image, text wraps around it">🖼 Small</button>
       {variant==="reading"&&<button style={{...tb,background:"#fff8e6",border:"1px solid #E0B515",color:"#8a6800",fontWeight:600}} onMouseDown={e=>{e.preventDefault();insertDivider();}}>— Divider</button>}
     </div>
     {imgMode&&<div style={{display:"flex",gap:6,padding:"7px 10px",background:"#ede9e2"}}>
