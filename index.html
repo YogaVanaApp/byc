@@ -419,8 +419,8 @@ const QuizEditor=({quiz,onChange})=>{
   const inp={width:"100%",padding:"9px 12px",borderRadius:8,border:`1px solid ${B.sage}`,fontSize:14,boxSizing:"border-box",marginBottom:5,background:"white"};
   return(<div style={{paddingBottom:90}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-      <span style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Multiple Choice ({mc.length}/10)</span>
-      {mc.length<10&&<button onClick={()=>setMC([...mc,{question:"",options:["","","",""],correct:0}])} style={{padding:"7px 13px",borderRadius:8,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer"}}>+ Add</button>}
+      <span style={{fontWeight:600,fontSize:14,color:B.adminDark}}>Multiple Choice ({mc.length}/25)</span>
+      {mc.length<25&&<button onClick={()=>setMC([...mc,{question:"",options:["","","",""],correct:0}])} style={{padding:"7px 13px",borderRadius:8,background:B.adminDark,color:"white",border:"none",fontSize:13,cursor:"pointer"}}>+ Add</button>}
     </div>
     {mc.map((q,i)=>(<div key={i} style={{background:"white",borderRadius:10,padding:13,marginBottom:12,border:`1px solid ${B.sage}`}}>
       <div style={{display:"flex",justifyContent:"space-between",marginBottom:7}}><span style={{fontSize:12,color:B.purple,fontWeight:600}}>Q{i+1}</span><button onClick={()=>{const a=[...mc];a.splice(i,1);setMC(a);}} style={{background:"none",border:"none",cursor:"pointer",color:B.red,fontSize:16}}>🗑</button></div>
