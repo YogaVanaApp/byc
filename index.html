@@ -667,6 +667,8 @@ const FeedbackWriter=({batchId,lesson,response,existingFb,onBack,onNavigate,hasP
   const[rFb,setRFb]=useState(existingFb?.reflections||{});
   const[saving,setSaving]=useState(false);const[toast,setToast]=useState(null);
   const rfPs=lesson?.quiz?.reflections||[];
+  const mcQs=lesson?.quiz?.mcQuestions||[];
+  const[showAllQ,setShowAllQ]=useState(true);
   const persist=async()=>saveFeedback(batchId,response.uid,response.lessonId,{overall,reflections:rFb,studentName:response.studentName,lessonId:response.lessonId,uid:response.uid,savedAt:new Date().toISOString()});
   const doSave=async()=>{setSaving(true);const ok=await persist();setSaving(false);setToast(ok?"Feedback saved ✓":"Save failed");if(ok)setTimeout(onBack,1200);};
   const doNavigate=async dir=>{
@@ -701,6 +703,18 @@ const FeedbackWriter=({batchId,lesson,response,existingFb,onBack,onNavigate,hasP
         <textarea value={overall.note} onChange={e=>setOverall(p=>({...p,note:e.target.value}))} placeholder="Write your overall feedback…" style={ta}/>
         <button onClick={doSave} disabled={saving} style={{width:"100%",padding:"11px",borderRadius:10,background:B.adminDark,color:"white",border:"none",fontSize:12,fontWeight:500,cursor:"pointer",letterSpacing:0.5}}>{saving?"Saving…":"Send Feedback"}</button>
       </div>
+      {mcQs.length>0&&<div style={{background:"white",borderRadius:11,padding:"13px 14px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
+        <SL c="Quiz Answers" color={B.green}/>
+        {(showAllQ?mcQs:mcQs.slice(0,1)).map((q,i)=>{const sel=response.mcAnswers?.[i]??null;return(<div key={i} style={{marginBottom:14}}>
+          <div style={{fontSize:12.5,color:B.adminDark,fontWeight:600,marginBottom:6,lineHeight:1.4}}>{i+1}. {q.question}</div>
+          {q.options.map((opt,j)=>{const iC=j===q.correct,iS=j===sel;let bg="white",border=`1px solid ${B.sage}`;if(iC){bg="#f0faf0";border="1px solid #A39C0F30";}if(iS&&!iC){bg="#fff0f0";border="1px solid #C0392B25";}return(<div key={j} style={{display:"flex",alignItems:"center",gap:7,padding:"6px 9px",borderRadius:8,marginBottom:3,border,background:bg}}>
+            {iC?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A39C0F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>:iS?<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#C0392B" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>:<div style={{width:10,height:10,borderRadius:"50%",border:"1.5px solid #C5BBCE",flexShrink:0}}/>}
+            <span style={{fontFamily:"'EB Garamond',serif",fontSize:13,fontWeight:iC?600:400,color:iS&&!iC?"#C0392B":iC?B.darkPurple:"#8a8290"}}>{opt}</span>
+            {iS&&!iC&&<span style={{fontSize:9,color:"#C0392B",marginLeft:2}}>student's answer</span>}
+          </div>);})}
+        </div>);})}
+        {mcQs.length>1&&<button onClick={()=>setShowAllQ(v=>!v)} style={{width:"100%",padding:"9px",borderRadius:9,background:B.linen,color:B.darkPurple,border:"none",fontSize:12,fontWeight:500,cursor:"pointer"}}>{showAllQ?"Hide questions ↑":`Review all ${mcQs.length} questions ↓`}</button>}
+      </div>}
       {rfPs.map((prompt,i)=>{
         const rf=rFb[i]||{stamp:null,note:"",resourceTitle:"",resourceUrl:""};
         return(<div key={i} style={{background:"white",borderRadius:11,padding:"13px 14px",marginBottom:12,boxShadow:"0 2px 8px rgba(44,31,58,0.06)"}}>
